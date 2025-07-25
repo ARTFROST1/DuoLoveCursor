@@ -1,9 +1,10 @@
 import { Link, useNavigate } from "react-router-dom";
-import { useEffect, useMemo } from "react";
+import { useEffect, useMemo, useState } from "react";
 import Avatar from "../components/Avatar";
+import type { GameSession } from "../api";
 import Carousel from "../components/Carousel";
 import GameTile from "../components/GameTile";
-import { getPendingInvites, acceptInviteSession, getOpenSessions } from "../api";
+import { getPendingInvites, acceptInviteSession, getOpenSessions, cancelSession } from "../api";
 import { useQuery } from "@tanstack/react-query";
 import { getGames } from "../api";
 import { useAppStore } from "../store";
@@ -15,8 +16,9 @@ import { useAppStore } from "../store";
 export default function Home() {
   const { displayName, partnerName, partnershipCreatedAt, partnerOnline, partnerConnected, userId } = useAppStore();
   const navigate = useNavigate();
+  const [pendingInvite, setPendingInvite] = useState<GameSession | null>(null);
 
-  // Poll pending invites every 5s and open active sessions if partner already accepted
+  // Poll invites / open sessions every 2s. If invite found show modal instead of auto-redirect
   useEffect(() => {
     if (!userId) return;
     const interval = setInterval(async () => {
@@ -35,22 +37,16 @@ export default function Home() {
       // 2) Then poll pending invites
       try {
         const invites = await getPendingInvites(userId);
-        if (invites.length > 0) {
-          const inv = invites[0];
-          // Автоматически переходим на экран игры (можно улучшить кастомным модальным окном)
-          try {
-            await acceptInviteSession(inv.id, userId);
-            navigate(`/game/${inv.game.slug}?session=${inv.id}`);
-          } catch (err) {
-            console.error("Failed to accept invite", err);
-          }
+        if (invites.length > 0 && !pendingInvite) {
+          // show the first invite in modal
+          setPendingInvite(invites[0]);
         }
       } catch (err) {
         console.error(err);
       }
     }, 2000);
     return () => clearInterval(interval);
-  }, [userId]);
+  }, [userId, pendingInvite]);
 
   // Until partner connects, redirect to onboarding
   useEffect(() => {
@@ -136,6 +132,66 @@ export default function Home() {
           <button style={{ padding: 12, fontSize: 16 }}>Играть 🎮</button>
         </Link>
       </section>
+
+      {/* Invite modal */}
+      {pendingInvite && (
+        <div
+          style={{
+            position: "fixed",
+            inset: 0,
+            background: "rgba(0,0,0,0.5)",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            zIndex: 10000,
+          }}
+        >
+          <div
+            style={{
+              background: "var(--tg-theme-bg-color, #fff)",
+              borderRadius: 8,
+              padding: 24,
+              maxWidth: 320,
+              textAlign: "center",
+            }}
+          >
+            <p style={{ marginBottom: 16 }}>
+              Партнёр приглашает сыграть в «{pendingInvite.game.title}». Принять приглашение?
+            </p>
+            <div style={{ display: "flex", gap: 12, justifyContent: "center" }}>
+              <button
+                onClick={async () => {
+                  try {
+                    await acceptInviteSession(pendingInvite.id, userId);
+                    navigate(`/game/${pendingInvite.game.slug}?session=${pendingInvite.id}`);
+                  } catch (e) {
+                    alert("Не удалось принять приглашение");
+                  } finally {
+                    setPendingInvite(null);
+                  }
+                }}
+                style={{ padding: 8, flex: 1 }}
+              >
+                Принять
+              </button>
+              <button
+                onClick={async () => {
+                  try {
+                    await cancelSession(pendingInvite.id, userId);
+                  } catch (e) {
+                    console.error(e);
+                  } finally {
+                    setPendingInvite(null);
+                  }
+                }}
+                style={{ padding: 8, flex: 1 }}
+              >
+                Отклонить
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

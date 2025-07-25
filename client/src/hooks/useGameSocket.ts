@@ -1,39 +1,48 @@
 import { useEffect, useRef, useState } from "react";
-import { io, Socket } from "socket.io-client";
+import { io } from "socket.io-client";
+import type { Socket as IOSocket } from "socket.io-client";
 
 interface ServerToClientEvents {
   start: { countdownMs: number };
   result: { winnerId: number };
   error: { message: string };
+  choiceProgress: { exitCount: number; againCount: number };
+  restart: { sessionId: number };
+  exit: void;
 }
 
 interface ClientToServerEvents {
   reaction: () => void;
+  choice: (payload: { action: "exit" | "again" }) => void;
 }
+
+
 
 export interface GameSocketState {
   phase: "waiting" | "countdown" | "playing" | "finished" | "error";
   countdownSec?: number;
   winnerId?: number;
   error?: string;
+  exitCount?: number;
+  againCount?: number;
 }
 
 export function useGameSocket(sessionId: number, userId: number, enabled: boolean = true) {
   const [state, setState] = useState<GameSocketState>({ phase: "waiting" });
-  const socketRef = useRef<Socket<ServerToClientEvents, ClientToServerEvents>>();
+  const socketRef = useRef<IOSocket<ServerToClientEvents, ClientToServerEvents>>();
 
   useEffect(() => {
     if (!enabled) return;
     if (!sessionId || !userId) return;
 
-    const socket = io("/", {
+    const socket: IOSocket<ServerToClientEvents, ClientToServerEvents> = io("/", {
       path: "/socket.io",
       query: { sessionId: String(sessionId), userId: String(userId) },
-    }) as Socket<ServerToClientEvents, ClientToServerEvents>;
+    });
 
     socketRef.current = socket;
 
-    socket.on("start", ({ countdownMs }) => {
+    socket.on("start", ({ countdownMs }: { countdownMs: number }) => {
       const totalSec = Math.ceil(countdownMs / 1000);
       setState({ phase: "countdown", countdownSec: totalSec });
 
@@ -49,11 +58,23 @@ export function useGameSocket(sessionId: number, userId: number, enabled: boolea
       }, 1000);
     });
 
-    socket.on("result", ({ winnerId }) => {
+    socket.on("result", ({ winnerId }: { winnerId: number }) => {
       setState({ phase: "finished", winnerId });
     });
 
-    socket.on("error", ({ message }) => {
+    socket.on("choiceProgress", ({ exitCount, againCount }: { exitCount: number; againCount: number }) => {
+      setState((prev) => ({ ...prev, exitCount, againCount }));
+    });
+
+    socket.on("restart", ({ sessionId }: { sessionId: number }) => {
+      window.location.href = `${window.location.pathname.split("?")[0]}?session=${sessionId}`;
+    });
+
+    socket.on("exit", () => {
+      window.location.href = "/";
+    });
+
+    socket.on("error", ({ message }: { message: string }) => {
       setState({ phase: "error", error: message });
     });
 
@@ -66,5 +87,9 @@ export function useGameSocket(sessionId: number, userId: number, enabled: boolea
     socketRef.current?.emit("reaction");
   };
 
-  return { state, sendReaction };
+  const sendChoice = (action: "exit" | "again") => {
+    socketRef.current?.emit("choice", { action });
+  };
+
+  return { state, sendReaction, sendChoice };
 }

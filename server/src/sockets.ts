@@ -2,18 +2,25 @@ import { Server } from "socket.io";
 import prisma from "./prisma";
 
 interface ServerToClientEvents {
-  start: { countdownMs: number };
-  result: { winnerId: number };
-  error: { message: string };
+  start: (payload: { countdownMs: number }) => void;
+  result: (payload: { winnerId: number }) => void;
+  error: (payload: { message: string }) => void;
+  choiceProgress: (payload: { exitCount: number; againCount: number }) => void;
+  restart: (payload: { sessionId: number }) => void;
+  exit: () => void;
 }
 
 interface ClientToServerEvents {
-  reaction: void;
+  reaction: () => void;
+  choice: (payload: { action: "exit" | "again" }) => void;
 }
 
 export function initSockets(io: Server<ClientToServerEvents, ServerToClientEvents>) {
   // room => firstReactor userId
+  // room => firstReactor userId
   const roomWinner: Map<string, number> = new Map();
+  // room => { [userId]: "exit" | "again" }
+  const roomChoices: Map<string, Record<number, "exit" | "again">> = new Map();
 
   io.on("connection", async (socket) => {
     const sessionId = Number(socket.handshake.query.sessionId);
@@ -68,7 +75,44 @@ export function initSockets(io: Server<ClientToServerEvents, ServerToClientEvent
       });
     });
 
+    socket.on("choice", async ({ action }) => {
+      let choices = roomChoices.get(room);
+      if (!choices) {
+        choices = {};
+        roomChoices.set(room, choices);
+      }
+      choices[userId] = action;
+
+      const values = Object.values(choices);
+      const exitCount = values.filter((c) => c === "exit").length;
+      const againCount = values.filter((c) => c === "again").length;
+
+      // Notify progress to clients
+      io.to(room).emit("choiceProgress", { exitCount, againCount });
+
+      if (values.length < 2) return; // wait for second player
+
+      roomChoices.delete(room);
+
+      if (againCount === 2) {
+        // create new session immediately using same game
+        const newSession = await prisma.gameSession.create({
+          data: {
+            gameId: session.gameId,
+            partner1Id: session.partner1Id,
+            partner2Id: session.partner2Id,
+            partner2Accepted: true,
+          },
+        });
+        io.to(room).emit("restart", { sessionId: newSession.id });
+      } else {
+        // any other combination results in exit to main
+        io.to(room).emit("exit");
+      }
+    });
+
     socket.on("disconnect", () => {
+      roomChoices.delete(room);
       // Nothing to do for now
     });
   });

@@ -12,7 +12,7 @@ export default function GameScreen() {
   const userId = useAppStore((s) => s.userId);
   const navigate = useNavigate();
 
-  const { state, sendReaction } = useGameSocket(sessionId, userId ?? 0);
+  const { state, sendReaction, sendChoice } = useGameSocket(sessionId, userId ?? 0);
 
   const { data: session } = useQuery({
     queryKey: ["session", sessionId],
@@ -22,6 +22,8 @@ export default function GameScreen() {
   });
 
   const isInviter = session ? session.partner1Id === userId : false;
+
+
   const waitingForPartner = state.phase === "waiting" && session && !session.partner2Accepted;
 
   const handleCancel = async () => {
@@ -66,7 +68,32 @@ export default function GameScreen() {
             </button>
           )}
           {state.phase === "finished" && (
-            <p>{state.winnerId === userId ? "Вы выиграли!" : "Победил партнёр"}</p>
+            <>
+              {state.exitCount !== undefined && (
+                <p>
+                  Выбор: выйти {state.exitCount}/2, ещё раз {state.againCount}/2
+                </p>
+              )}
+              <p>{state.winnerId === userId ? "Вы выиграли!" : "Победил партнёр"}</p>
+              <div style={{ display: "flex", gap: 12, justifyContent: "center", marginTop: 16 }}>
+                <button
+                  onClick={() => {
+                    sendChoice("exit");
+                  }}
+                  style={{ padding: 12 }}
+                >
+                  Выйти
+                </button>
+                <button
+                  onClick={() => {
+                    sendChoice("again");
+                  }}
+                  style={{ padding: 12 }}
+                >
+                  Играть ещё раз
+                </button>
+              </div>
+            </>
           )}
           {state.phase === "error" && <p style={{ color: "red" }}>{state.error}</p>}
         </>

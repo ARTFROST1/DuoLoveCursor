@@ -23,8 +23,8 @@ router.post("/start", async (req, res) => {
 
     const partnerId = partnership.user1Id === userId ? partnership.user2Id : partnership.user1Id;
 
-    // Close any previous unfinished sessions between these two users
-    await prisma.gameSession.updateMany({
+    // Check if there's already an active unfinished session between these partners
+    const existing = await prisma.gameSession.findFirst({
       where: {
         endedAt: null,
         OR: [
@@ -32,8 +32,13 @@ router.post("/start", async (req, res) => {
           { partner1Id: partnerId, partner2Id: userId },
         ],
       },
-      data: { endedAt: new Date() },
     });
+    if (existing) {
+      // Do not create a new session – return existing session id
+      return res.json({ sessionId: existing.id, existed: true });
+    }
+
+    
 
     const session = await prisma.gameSession.create({
       data: {
