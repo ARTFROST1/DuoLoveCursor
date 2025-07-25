@@ -2,6 +2,8 @@ import "dotenv/config";
 import express from "express";
 import cors from "cors";
 import inviteRoutes from "./routes/invite";
+import authRoutes from "./routes/auth";
+import partnershipRoutes from "./routes/partnership";
 import gamesRoutes from "./routes/games";
 
 const app = express();
@@ -11,6 +13,8 @@ app.use(cors());
 app.use(express.json());
 
 app.use("/invite", inviteRoutes);
+app.use("/auth", authRoutes);
+app.use("/partnership", partnershipRoutes);
 app.use("/games", gamesRoutes);
 
 app.get("/", (_req, res) => {

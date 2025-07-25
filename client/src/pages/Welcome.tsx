@@ -1,17 +1,41 @@
 import { useMutation } from "@tanstack/react-query";
-import { createInvite } from "../api";
+import { useEffect } from "react";
+import { createInvite, getPartnershipStatus } from "../api";
 import { useAppStore } from "../store";
 
 export default function Welcome() {
-  const { userId, inviteToken, setInviteToken } = useAppStore();
+  const {
+    userId,
+    inviteToken,
+    setInviteToken,
+    partnerConnected,
+    setPartnerConnected,
+  } = useAppStore();
+
+  // Poll every 3s until partner connects
+  useEffect(() => {
+    if (!inviteToken || partnerConnected) return;
+    const id = setInterval(() => {
+      getPartnershipStatus(userId)
+        .then((data) => {
+          if (data.connected) setPartnerConnected(true);
+        })
+        .catch(console.error);
+    }, 3000);
+    return () => clearInterval(id);
+  }, [inviteToken, partnerConnected, userId, setPartnerConnected]);
+
 
   const { mutate, isPending } = useMutation({
     mutationFn: () => createInvite(userId),
     onSuccess: (token) => setInviteToken(token),
   });
 
-  const botName = "DuetGamesBot"; // TODO: move to env
-  const deepLink = `https://t.me/${botName}?startapp=${inviteToken}`;
+  const BOT_USERNAME = "duolove_bot"; // TODO: move to env
+  const WEBAPP_PATH = "DuoLove"; // webapp path from BotFather
+  const deepLink = inviteToken
+    ? `https://t.me/${BOT_USERNAME}/${WEBAPP_PATH}?startapp=${inviteToken}`
+    : "";
 
   return (
     <div style={{ padding: 16 }}>
@@ -35,6 +59,9 @@ export default function Welcome() {
         <button onClick={() => mutate()} disabled={isPending} style={{ padding: 8 }}>
           {isPending ? "Создаём..." : "Создать пригласительную ссылку"}
         </button>
+      )}
+      {inviteToken && !partnerConnected && (
+        <p style={{ marginTop: 16 }}>Ожидаем подключение партнёра…</p>
       )}
     </div>
   );

@@ -3,6 +3,16 @@ import { PrismaClient } from "@prisma/client";
 const prisma = new PrismaClient();
 
 async function main() {
+  // create dev user with id 1 if not exists
+  await prisma.user.upsert({
+    where: { id: 1 },
+    update: {},
+    create: {
+      id: 1,
+      telegramId: "dev_user_1",
+      displayName: "Developer",
+    },
+  });
   const games = [
     {
       slug: "quiz_love",

@@ -12,6 +12,13 @@ router.post("/create", async (req, res) => {
       return res.status(400).json({ error: "userId required" });
     }
 
+    // Ensure creator user exists
+    await prisma.user.upsert({
+      where: { id: userId },
+      update: {},
+      create: { id: userId, telegramId: `tg_${userId}` },
+    });
+
     // Generate unique token
     const token = nanoid(10);
 
@@ -51,6 +58,13 @@ router.post("/accept", async (req, res) => {
         usedById: userId,
         usedAt: new Date(),
       },
+    });
+
+        // ensure usedBy user exists
+    await prisma.user.upsert({
+      where: { id: userId },
+      update: {},
+      create: { id: userId, telegramId: `tg_${userId}` },
     });
 
     // Create partnership if not exists
