@@ -1,15 +1,169 @@
-// This is your Prisma schema file,
-// learn more about it in the docs: https://pris.ly/d/prisma-schema
-
-// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
-// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
-
 generator client {
   provider = "prisma-client-js"
-  output   = "../generated/prisma"
 }
 
 datasource db {
-  provider = "postgresql"
+  provider = "sqlite"
   url      = env("DATABASE_URL")
 }
+
+model User {
+  id           Int      @id @default(autoincrement())
+  telegramId   String   @unique
+  displayName  String?
+  avatarId     Int?
+  onlineStatus Boolean  @default(false)
+  createdAt    DateTime @default(now())
+
+  // relations
+  partnerships1    Partnership[]     @relation("User1")
+  partnerships2    Partnership[]     @relation("User2")
+  gameSessions1    GameSession[]     @relation("Partner1")
+  gameSessions2    GameSession[]     @relation("Partner2")
+  invitesCreated   Invite[]          @relation("InvitesCreated")
+  invitesUsed      Invite[]          @relation("InvitesUsed")
+  userAchievements UserAchievement[]
+  settings         Settings?
+  histories        History[]
+}
+
+model Partnership {
+  id          Int      @id @default(autoincrement())
+  user1       User     @relation("User1", fields: [user1Id], references: [id])
+  user1Id     Int
+  user2       User     @relation("User2", fields: [user2Id], references: [id])
+  user2Id     Int
+  connectedAt DateTime @default(now())
+  isActive    Boolean  @default(true)
+
+  gameSessions GameSession[]
+}
+
+model Game {
+  id           Int     @id @default(autoincrement())
+  slug         String  @unique
+  title        String
+  description  String
+  category     String
+  animationUrl String?
+  isActive     Boolean @default(true)
+
+  gameSessions GameSession[]
+}
+
+model GameSession {
+  id         Int       @id @default(autoincrement())
+  game       Game      @relation(fields: [gameId], references: [id])
+  gameId     Int
+  partner1   User      @relation("Partner1", fields: [partner1Id], references: [id])
+  partner1Id Int
+  partner2   User      @relation("Partner2", fields: [partner2Id], references: [id])
+  partner2Id Int
+  startedAt  DateTime  @default(now())
+  endedAt    DateTime?
+  resultJson Json?
+
+  histories     History[]
+  Partnership   Partnership? @relation(fields: [partnershipId], references: [id])
+  partnershipId Int?
+}
+
+model Achievement {
+  id          Int    @id @default(autoincrement())
+  emoji       String
+  title       String
+  description String
+  goal        Int
+
+  userAchievements UserAchievement[]
+}
+
+model UserAchievement {
+  id            Int         @id @default(autoincrement())
+  user          User        @relation(fields: [userId], references: [id])
+  userId        Int
+  achievement   Achievement @relation(fields: [achievementId], references: [id])
+  achievementId Int
+  progress      Int         @default(0)
+  achievedAt    DateTime?
+}
+
+model Invite {
+  id          Int       @id @default(autoincrement())
+  token       String    @unique
+  createdBy   User      @relation("InvitesCreated", fields: [createdById], references: [id])
+  createdById Int
+  createdAt   DateTime  @default(now())
+  usedBy      User?     @relation("InvitesUsed", fields: [usedById], references: [id])
+  usedById    Int?
+  usedAt      DateTime?
+}
+
+model History {
+  id            Int         @id @default(autoincrement())
+  user          User        @relation(fields: [userId], references: [id])
+  userId        Int
+  gameSession   GameSession @relation(fields: [gameSessionId], references: [id])
+  gameSessionId Int
+  playedAt      DateTime    @default(now())
+  resultShort   String?
+}
+
+model Settings {
+  userId        Int     @id
+  user          User    @relation(fields: [userId], references: [id])
+  theme         String  @default("light")
+  language      String  @default("ru")
+  soundEnabled  Boolean @default(true)
+  notifications Boolean @default(true)
+}
+
+/**
+ * // Legacy schema below commented out
+ * datasource db {
+ * provider = "sqlite"
+ * url      = env("DATABASE_URL")
+ * }
+ * model User {
+ * id        Int      @id @default(autoincrement())
+ * tgId      String   @unique
+ * name      String
+ * avatar    String
+ * lang      String   @default("ru")
+ * theme     String   @default("light")
+ * createdAt DateTime @default(now())
+ * partnershipsAsUser1 Partnership[] @relation("User1")
+ * partnershipsAsUser2 Partnership[] @relation("User2")
+ * }
+ * model Partnership {
+ * id        Int      @id @default(autoincrement())
+ * user1     User     @relation("User1", fields: [user1Id], references: [id])
+ * user1Id   Int
+ * user2     User     @relation("User2", fields: [user2Id], references: [id])
+ * user2Id   Int
+ * createdAt DateTime @default(now())
+ * sessions  GameSession[]
+ * }
+ * model Game {
+ * id          Int      @id @default(autoincrement())
+ * slug        String   @unique
+ * category    String
+ * title       String
+ * description String
+ * sessions    GameSession[]
+ * }
+ * model GameSession {
+ * id            Int         @id @default(autoincrement())
+ * game          Game        @relation(fields: [gameId], references: [id])
+ * gameId        Int
+ * partnership   Partnership @relation(fields: [partnershipId], references: [id])
+ * partnershipId Int
+ * startedAt     DateTime    @default(now())
+ * finishedAt    DateTime?
+ * winnerId      Int?
+ * winner        User?        @relation(fields: [winnerId], references: [id])
+ * dataJson      Json?
+ * }
+ * // Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
+ * // Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
+ */
