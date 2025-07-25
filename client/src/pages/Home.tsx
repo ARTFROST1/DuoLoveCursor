@@ -3,6 +3,7 @@ import { useEffect, useMemo } from "react";
 import Avatar from "../components/Avatar";
 import Carousel from "../components/Carousel";
 import GameTile from "../components/GameTile";
+import { getPendingInvites, acceptInviteSession } from "../api";
 import { useQuery } from "@tanstack/react-query";
 import { getGames } from "../api";
 import { useAppStore } from "../store";
@@ -12,8 +13,31 @@ import { useAppStore } from "../store";
  * Displays user & partner names / avatars (stub), a days-together counter and a shortcut to the Games list.
  */
 export default function Home() {
-  const { displayName, partnerName, partnershipCreatedAt, partnerOnline, partnerConnected } = useAppStore();
+  const { displayName, partnerName, partnershipCreatedAt, partnerOnline, partnerConnected, userId } = useAppStore();
   const navigate = useNavigate();
+
+  // Poll pending invites every 5s
+  useEffect(() => {
+    if (!userId) return;
+    const interval = setInterval(async () => {
+      try {
+        const invites = await getPendingInvites(userId);
+        if (invites.length > 0) {
+          const inv = invites[0];
+          // Автоматически переходим на экран игры (можно улучшить кастомным модальным окном)
+          try {
+            await acceptInviteSession(inv.id, userId);
+            navigate(`/game/${inv.game.slug}?session=${inv.id}`);
+          } catch (err) {
+            console.error("Failed to accept invite", err);
+          }
+        }
+      } catch (err) {
+        console.error(err);
+      }
+    }, 5000);
+    return () => clearInterval(interval);
+  }, [userId]);
 
   // Until partner connects, redirect to onboarding
   useEffect(() => {

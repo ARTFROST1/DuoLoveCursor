@@ -13,6 +13,11 @@ export default defineConfig({
     port: 5173,
     allowedHosts: ["fbf94b9b674e.ngrok-free.app"],
     proxy: {
+      "/socket.io": {
+        target: "http://localhost:4000",
+        ws: true,
+        changeOrigin: true,
+      },
       "/auth": {
         target: "http://localhost:4000",
         changeOrigin: true,
@@ -22,6 +27,10 @@ export default defineConfig({
         changeOrigin: true,
       },
       "/partnership": {
+        target: "http://localhost:4000",
+        changeOrigin: true,
+      },
+      "/game-session": {
         target: "http://localhost:4000",
         changeOrigin: true,
       },

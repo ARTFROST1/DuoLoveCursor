@@ -1,11 +1,12 @@
-import { Link } from "react-router-dom";
+import GameTile from "../components/GameTile";
 import { useQuery } from "@tanstack/react-query";
-import { getGames } from "../api";
+import { getGamesByCategory } from "../api";
+import type { CategoryGames } from "../api";
 
 export default function GameList() {
-  const { data: games, isLoading, error } = useQuery({
-    queryKey: ["games"],
-    queryFn: getGames,
+  const { data: categories, isLoading, error } = useQuery<CategoryGames[]>({
+    queryKey: ["games-by-category"],
+    queryFn: getGamesByCategory,
   });
 
   if (isLoading) return <p>Loading...</p>;
@@ -13,14 +14,17 @@ export default function GameList() {
 
   return (
     <div style={{ padding: 16 }}>
-      <h1>DuoLoveCursor Games</h1>
-      <ul>
-        {games.map((g: any) => (
-          <li key={g.id}>
-            <Link to={`/game/${g.slug}`}>{g.title}</Link> — {g.description}
-          </li>
-        ))}
-      </ul>
+      <h1>Игры</h1>
+      {categories?.map((cat) => (
+        <section key={cat.category} style={{ marginBottom: 24 }}>
+          <h2 style={{ textTransform: "capitalize", fontSize: 20, marginBottom: 12 }}>{cat.category}</h2>
+          <div style={{ display: "flex", gap: 12, overflowX: "auto", paddingBottom: 8 }}>
+            {cat.games.map((g) => (
+              <GameTile key={g.id} game={g} />
+            ))}
+          </div>
+        </section>
+      ))}
     </div>
   );
 }

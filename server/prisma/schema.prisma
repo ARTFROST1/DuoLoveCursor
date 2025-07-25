@@ -20,6 +20,7 @@ model User {
   partnerships2    Partnership[]     @relation("User2")
   gameSessions1    GameSession[]     @relation("Partner1")
   gameSessions2    GameSession[]     @relation("Partner2")
+  gamesWon        GameSession[]     @relation("WinnerSessions")
   invitesCreated   Invite[]          @relation("InvitesCreated")
   invitesUsed      Invite[]          @relation("InvitesUsed")
   userAchievements UserAchievement[]
@@ -62,6 +63,9 @@ model GameSession {
   startedAt  DateTime  @default(now())
   endedAt    DateTime?
   resultJson Json?
+  partner2Accepted Boolean @default(false)
+  winner       User?     @relation("WinnerSessions", fields: [winnerId], references: [id])
+  winnerId     Int?
 
   histories     History[]
   Partnership   Partnership? @relation(fields: [partnershipId], references: [id])

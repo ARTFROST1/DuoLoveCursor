@@ -5,8 +5,13 @@ import inviteRoutes from "./routes/invite";
 import authRoutes from "./routes/auth";
 import partnershipRoutes from "./routes/partnership";
 import gamesRoutes from "./routes/games";
+import gameSessionRoutes from "./routes/gameSession";
+import { createServer } from "http";
+import { Server } from "socket.io";
+import { initSockets } from "./sockets";
 
 const app = express();
+const httpServer = createServer(app);
 const PORT = process.env.PORT || 4000;
 
 app.use(cors());
@@ -16,11 +21,15 @@ app.use("/invite", inviteRoutes);
 app.use("/auth", authRoutes);
 app.use("/partnership", partnershipRoutes);
 app.use("/games", gamesRoutes);
+app.use("/game-session", gameSessionRoutes);
 
 app.get("/", (_req, res) => {
   res.send("DuoLoveCursor API is running 🚀");
 });
 
-app.listen(PORT, () => {
+const io = new Server(httpServer, { cors: { origin: "*" } });
+initSockets(io);
+
+httpServer.listen(PORT, () => {
   console.log(`Server listening on port ${PORT}`);
 });
