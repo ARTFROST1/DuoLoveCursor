@@ -26,9 +26,13 @@ export default function App() {
         setUser(id, tgUser.id.toString(), tgUser.first_name ?? tgUser.username);
         // Check if user already has a partner
         getPartnershipStatus(id)
-          .then((data: { connected: boolean }) => {
+          .then((data: { connected: boolean; createdAt?: string; partner?: { id: number; name?: string } }) => {
             if (data.connected) {
+              const { partner, createdAt } = data;
               useAppStore.getState().setPartnerConnected(true);
+              if (partner) {
+                useAppStore.getState().setPartnerData(partner.id, partner.name, undefined, createdAt);
+              }
             }
           })
           .catch(console.error);

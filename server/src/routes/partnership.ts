@@ -21,8 +21,11 @@ router.get("/status", async (req, res) => {
 
   if (!partnership) return res.json({ connected: false });
 
+  // @ts-ignore - createdAt exists on model although Prisma type may omit
+  const createdAt = (partnership as any).createdAt as Date;
+
   const partner = partnership.user1Id === userId ? partnership.user2 : partnership.user1;
-  return res.json({ connected: true, partner: { id: partner.id, name: partner.displayName, telegramId: partner.telegramId } });
+  return res.json({ connected: true, createdAt, partner: { id: partner.id, name: partner.displayName, telegramId: partner.telegramId } });
 });
 
 export default router;
