@@ -76,12 +76,40 @@ export async function getGamesByCategory() {
 }
 
 // --- Game session / invitation ---
+export async function getOpenSessions(userId: number) {
+  const res = await fetch(`${API_URL}/game-session/open?userId=${userId}`);
+  if (!res.ok) throw new Error("Failed to fetch open sessions");
+  return res.json() as Promise<GameSession[]>;
+}
+
+export async function finishSession(sessionId: number, userId: number) {
+  const res = await fetch(`${API_URL}/game-session/${sessionId}/finish`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ userId }),
+  });
+  if (!res.ok) throw new Error("Failed to finish session");
+  return res.json();
+}
+
+export async function cancelSession(sessionId: number, userId: number) {
+  const res = await fetch(`${API_URL}/game-session/${sessionId}/cancel`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ userId }),
+  });
+  if (!res.ok) throw new Error("Failed to cancel session");
+  return res.json();
+}
+
+// --- Game session / invitation ---
 export interface GameSession {
   id: number;
   game: Game;
   partner1Id: number;
   partner2Id: number;
   partner2Accepted: boolean;
+  endedAt?: string | null;
 }
 
 export async function startGame(userId: number, gameSlug: string) {

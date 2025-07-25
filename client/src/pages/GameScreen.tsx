@@ -1,5 +1,6 @@
 import { useParams, useNavigate, useSearchParams } from "react-router-dom";
-import { startGame } from "../api";
+import { useQuery } from "@tanstack/react-query";
+import { startGame, getSession, cancelSession } from "../api";
 import { useAppStore } from "../store";
 import { useGameSocket } from "../hooks/useGameSocket";
 
@@ -12,6 +13,26 @@ export default function GameScreen() {
   const navigate = useNavigate();
 
   const { state, sendReaction } = useGameSocket(sessionId, userId ?? 0);
+
+  const { data: session } = useQuery({
+    queryKey: ["session", sessionId],
+    queryFn: () => getSession(sessionId),
+    enabled: !!sessionId,
+    refetchInterval: 2000,
+  });
+
+  const isInviter = session ? session.partner1Id === userId : false;
+  const waitingForPartner = state.phase === "waiting" && session && !session.partner2Accepted;
+
+  const handleCancel = async () => {
+    if (!sessionId || !userId) return;
+    try {
+      await cancelSession(sessionId, userId);
+      navigate("/", { replace: true });
+    } catch (err) {
+      alert("Не удалось отменить сессию");
+    }
+  };
 
   const handleStart = async () => {
     if (!userId) return;
@@ -28,7 +49,16 @@ export default function GameScreen() {
       <h2>{slug === "reaction_duo" ? "Fast Reaction" : `Игра: ${slug}`}</h2>
       {sessionId ? (
         <>
-          {state.phase === "waiting" && <p>Ждём партнёра…</p>}
+          {waitingForPartner && (
+            <>
+              <p>Ждём партнёра…</p>
+              {isInviter && (
+                <button onClick={handleCancel} style={{ marginTop: 16 }}>
+                  Отменить приглашение
+                </button>
+              )}
+            </>
+          )}
           {state.phase === "countdown" && <h1 style={{ fontSize: 72 }}>{state.countdownSec}</h1>}
           {state.phase === "playing" && (
             <button onClick={sendReaction} style={{ padding: 40, fontSize: 32 }}>

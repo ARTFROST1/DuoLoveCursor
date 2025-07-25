@@ -3,7 +3,7 @@ import { useEffect, useMemo } from "react";
 import Avatar from "../components/Avatar";
 import Carousel from "../components/Carousel";
 import GameTile from "../components/GameTile";
-import { getPendingInvites, acceptInviteSession } from "../api";
+import { getPendingInvites, acceptInviteSession, getOpenSessions } from "../api";
 import { useQuery } from "@tanstack/react-query";
 import { getGames } from "../api";
 import { useAppStore } from "../store";
@@ -16,10 +16,23 @@ export default function Home() {
   const { displayName, partnerName, partnershipCreatedAt, partnerOnline, partnerConnected, userId } = useAppStore();
   const navigate = useNavigate();
 
-  // Poll pending invites every 5s
+  // Poll pending invites every 5s and open active sessions if partner already accepted
   useEffect(() => {
     if (!userId) return;
     const interval = setInterval(async () => {
+      // 1) Check active open sessions first
+      try {
+        const open = await getOpenSessions(userId);
+        const active = open.find((s) => s.partner2Accepted && !s.endedAt);
+        if (active) {
+          navigate(`/game/${active.game.slug}?session=${active.id}`);
+          return; // skip invite polling once redirected
+        }
+      } catch (err) {
+        console.error(err);
+      }
+
+      // 2) Then poll pending invites
       try {
         const invites = await getPendingInvites(userId);
         if (invites.length > 0) {
@@ -35,7 +48,7 @@ export default function Home() {
       } catch (err) {
         console.error(err);
       }
-    }, 5000);
+    }, 2000);
     return () => clearInterval(interval);
   }, [userId]);
 

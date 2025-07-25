@@ -23,6 +23,18 @@ router.post("/start", async (req, res) => {
 
     const partnerId = partnership.user1Id === userId ? partnership.user2Id : partnership.user1Id;
 
+    // Close any previous unfinished sessions between these two users
+    await prisma.gameSession.updateMany({
+      where: {
+        endedAt: null,
+        OR: [
+          { partner1Id: userId, partner2Id: partnerId },
+          { partner1Id: partnerId, partner2Id: userId },
+        ],
+      },
+      data: { endedAt: new Date() },
+    });
+
     const session = await prisma.gameSession.create({
       data: {
         gameId: game.id,
@@ -37,16 +49,75 @@ router.post("/start", async (req, res) => {
   }
 });
 
+// GET /game-session/open?userId= – list any active (not finished/cancelled) sessions for this user
+router.get("/open", async (req, res) => {
+  const userId = Number(req.query.userId as string);
+  if (!userId) return res.status(400).json({ error: "userId required" });
+  try {
+    const sessions = await prisma.gameSession.findMany({
+      where: {
+        endedAt: null,
+        OR: [{ partner1Id: userId }, { partner2Id: userId }],
+      },
+      include: { game: true },
+    });
+    res.json(sessions);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: "Internal server error" });
+  }
+});
+
 // GET /game-session/pending?userId= – list sessions awaiting this user's confirmation
 router.get("/pending", async (req, res) => {
   const userId = Number(req.query.userId as string);
   if (!userId) return res.status(400).json({ error: "userId required" });
   try {
     const sessions = await prisma.gameSession.findMany({
-      where: { partner2Id: userId, partner2Accepted: false },
+      where: { partner2Id: userId, partner2Accepted: false, endedAt: null },
       include: { game: true, partner1: { select: { displayName: true } } },
     });
     res.json(sessions);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: "Internal server error" });
+  }
+});
+
+// POST /game-session/:id/finish – mark session finished manually
+router.post("/:id/finish", async (req, res) => {
+  const sessionId = Number(req.params.id);
+  const { userId } = req.body as { userId: number };
+  if (!sessionId || !userId) return res.status(400).json({ error: "sessionId and userId required" });
+  try {
+    const session = await prisma.gameSession.findUnique({ where: { id: sessionId } });
+    if (!session) return res.status(404).json({ error: "Session not found" });
+    if (session.endedAt) return res.json({ success: true });
+    if (session.partner1Id !== userId && session.partner2Id !== userId)
+      return res.status(403).json({ error: "Not a participant" });
+
+    await prisma.gameSession.update({ where: { id: sessionId }, data: { endedAt: new Date() } });
+    res.json({ success: true });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: "Internal server error" });
+  }
+});
+
+// POST /game-session/:id/cancel – either partner cancels the session if it hasn't started
+router.post("/:id/cancel", async (req, res) => {
+  const sessionId = Number(req.params.id);
+  const { userId } = req.body as { userId: number };
+  if (!sessionId || !userId) return res.status(400).json({ error: "sessionId and userId required" });
+  try {
+    const session = await prisma.gameSession.findUnique({ where: { id: sessionId } });
+    if (!session) return res.status(404).json({ error: "Session not found" });
+    if (session.endedAt) return res.status(400).json({ error: "Session already finished" });
+    if (session.partner1Id !== userId && session.partner2Id !== userId)
+      return res.status(403).json({ error: "Not a participant" });
+
+    await prisma.gameSession.update({ where: { id: sessionId }, data: { endedAt: new Date() } });
+    res.json({ success: true });
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: "Internal server error" });
