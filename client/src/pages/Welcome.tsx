@@ -1,4 +1,5 @@
 import { useMutation } from "@tanstack/react-query";
+import { useNavigate } from "react-router-dom";
 import { useEffect } from "react";
 import { createInvite, getPartnershipStatus } from "../api";
 import { useAppStore } from "../store";
@@ -13,6 +14,16 @@ export default function Welcome() {
   } = useAppStore();
 
   // Poll every 3s until partner connects
+  const navigate = useNavigate();
+
+  // redirect when partner connected
+  useEffect(() => {
+    if (partnerConnected) {
+      navigate("/");
+    }
+  }, [partnerConnected, navigate]);
+
+  // polling loop
   useEffect(() => {
     if (!inviteToken || partnerConnected) return;
     const id = setInterval(() => {
