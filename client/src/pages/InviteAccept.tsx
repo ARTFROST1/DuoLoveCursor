@@ -14,23 +14,41 @@ export default function InviteAccept() {
   useEffect(() => {
     if (!token || userId === 0) return; // wait until auth finished
 
-    acceptInvite(token, userId)
-      .then(async () => {
-        // Mark partnership established locally
+    let cancelled = false;
+
+    (async () => {
+      // Try to accept invite; if it fails (e.g. invite already used) – continue anyway
+      try {
+        await acceptInvite(token, userId);
+        // Mark as connected immediately and leave the page
         setPartnerConnected(true);
-        // Fetch partner data and createdAt
-        try {
-          const status = await getPartnershipStatus(userId);
-          if (status.connected && status.partner) {
-            setPartnerData(status.partner.id, status.partner.name, undefined, status.createdAt);
+        if (!cancelled) navigate("/", { replace: true });
+      } catch (err) {
+        console.error("acceptInvite failed", err);
+        // Even if request errored (e.g. already used), proceed to fetch status below
+      }
+
+      // Always try to fetch fresh partnership status
+      try {
+        const status = (await getPartnershipStatus(userId)) as { connected: boolean; createdAt?: string; partner?: { id: number; name?: string } };
+        if (status.connected) {
+          setPartnerConnected(true);
+          if (status.partner) {
+            setPartnerData(status.partner.id, status.partner.name, undefined /* avatarEmoji */, undefined, status.createdAt);
           }
-        } catch (e) {
-          console.error(e);
         }
-        navigate("/");
-      })
-      .catch(console.error);
-  }, [token, userId, navigate, setPartnerConnected]);
+      } catch (err) {
+        console.error("getPartnershipStatus failed", err);
+      }
+
+      // Even if something failed above, go to Home – it will redirect back to /welcome if not connected
+      if (!cancelled) navigate("/", { replace: true });
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [token, userId, navigate, setPartnerConnected, setPartnerData]);
 
   return <p>Accepting invite...</p>;
 }

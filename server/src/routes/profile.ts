@@ -18,7 +18,7 @@ router.get("/:userId", async (req, res) => {
     // Fetch user basic info
     const user = await prisma.user.findUnique({
       where: { id: userId },
-      select: { id: true, displayName: true, avatarId: true },
+      select: { id: true, displayName: true, avatarId: true, avatarEmoji: true },
     });
     if (!user) return res.status(404).json({ error: "User not found" });
 
@@ -29,8 +29,8 @@ router.get("/:userId", async (req, res) => {
         OR: [{ user1Id: userId }, { user2Id: userId }],
       },
       include: {
-        user1: { select: { id: true, displayName: true, avatarId: true } },
-        user2: { select: { id: true, displayName: true, avatarId: true } },
+        user1: { select: { id: true, displayName: true, avatarId: true, avatarEmoji: true } },
+        user2: { select: { id: true, displayName: true, avatarId: true, avatarEmoji: true } },
       },
     });
 
@@ -41,6 +41,7 @@ router.get("/:userId", async (req, res) => {
         id: partnerUser.id,
         name: partnerUser.displayName ?? undefined,
         avatarId: partnerUser.avatarId ?? undefined,
+        avatarEmoji: partnerUser.avatarEmoji ?? undefined,
       };
     }
 
@@ -73,7 +74,7 @@ router.get("/:userId", async (req, res) => {
     });
 
     res.json({
-      user: { id: user.id, name: user.displayName, avatarId: user.avatarId },
+      user: { id: user.id, name: user.displayName, avatarId: user.avatarId, avatarEmoji: user.avatarEmoji },
       partner,
       partnershipCreatedAt: partnership?.connectedAt,
       stats,

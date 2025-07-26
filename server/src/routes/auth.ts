@@ -14,11 +14,11 @@ router.post("/", async (req, res) => {
     const user = await prisma.user.upsert({
       where: { telegramId },
       update: {
-        displayName: name ?? undefined,
+        // Do not overwrite displayName if user has already set a custom one
       },
       create: {
         telegramId,
-        displayName: name ?? undefined,
+        displayName: name ?? undefined
       },
     });
 

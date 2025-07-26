@@ -4,10 +4,11 @@ import Home from "./pages/Home";
 import Profile from "./pages/Profile";
 import InviteAccept from "./pages/InviteAccept";
 import GameScreen from "./pages/GameScreen";
-import { useEffect } from "react";
+import { useEffect, useRef } from "react";
+import { io as socketIO } from "socket.io-client";
 import tg from "@twa-dev/sdk";
 import { useNavigate } from "react-router-dom";
-import { auth, getPartnershipStatus } from "./api";
+import { auth, getPartnershipStatus, getProfile, type ProfileData } from "./api";
 import { useAppStore } from "./store";
 import Welcome from "./pages/Welcome";
 import BottomNav from "./components/BottomNav";
@@ -17,6 +18,7 @@ import Settings from "./pages/Settings";
 export default function App() {
   const setUser = useAppStore((s) => s.setUser);
   const navigate = useNavigate();
+  const socketRef = useRef<any>(null);
 
   // Authenticate user on load
   useEffect(() => {
@@ -26,13 +28,31 @@ export default function App() {
       .then((id) => {
         setUser(id, tgUser.id.toString(), tgUser.first_name ?? tgUser.username);
         // Check if user already has a partner
+        // Fetch profile to get avatarEmoji and possibly partner emoji
+        getProfile(id)
+          .then((profile: ProfileData) => {
+            const { user, partner, partnershipCreatedAt } = profile;
+            useAppStore.getState().setAvatarEmoji(user.avatarEmoji ?? undefined);
+            if (partner) {
+              useAppStore.getState().setPartnerData(
+                partner.id,
+                partner.name,
+                partner.avatarEmoji,
+                undefined,
+                partnershipCreatedAt,
+              );
+            }
+          })
+          .catch(console.error);
+
+        // Check if user already has a partner
         getPartnershipStatus(id)
           .then((data: { connected: boolean; createdAt?: string; partner?: { id: number; name?: string } }) => {
             if (data.connected) {
               const { partner, createdAt } = data;
               useAppStore.getState().setPartnerConnected(true);
               if (partner) {
-                useAppStore.getState().setPartnerData(partner.id, partner.name, undefined, createdAt);
+                useAppStore.getState().setPartnerData(partner.id, partner.name, undefined /* avatarEmoji */, undefined /* online */, createdAt);
               }
             }
           })
@@ -48,6 +68,25 @@ export default function App() {
       navigate(`/invite/${startParam}`);
     }
   }, [navigate]);
+
+  // Connect Socket.IO for generic notifications (partnerDisconnected)
+  useEffect(() => {
+    const { userId } = useAppStore.getState();
+    if (!userId) return;
+    // Avoid reconnecting
+    if (socketRef.current) return;
+    const socket = socketIO("", { query: { userId } });
+    socket.on("partnerDisconnected", () => {
+      useAppStore.getState().setPartnerConnected(false);
+      navigate("/welcome", { replace: true });
+    });
+    socketRef.current = socket;
+
+    return () => {
+      socket.disconnect();
+      socketRef.current = null;
+    };
+  }, []);
   
 
   

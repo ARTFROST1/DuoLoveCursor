@@ -12,6 +12,7 @@ model User {
   telegramId   String   @unique
   displayName  String?
   avatarId     Int?
+  avatarEmoji String?
   onlineStatus Boolean  @default(false)
   createdAt    DateTime @default(now())
 
@@ -120,6 +121,7 @@ model Settings {
   language      String  @default("ru")
   soundEnabled  Boolean @default(true)
   notifications Boolean @default(true)
+  avatarEmoji  String?
 }
 
 /**

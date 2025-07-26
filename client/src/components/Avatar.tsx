@@ -1,5 +1,6 @@
 interface AvatarProps {
   name?: string;
+  emoji?: string;
   size?: number;
   online?: boolean;
 }
@@ -7,13 +8,15 @@ interface AvatarProps {
 /**
  * Simple circular avatar using initials. Replace with real images later.
  */
-export default function Avatar({ name, size = 64, online }: AvatarProps) {
+export default function Avatar({ name, emoji, size = 64, online }: AvatarProps) {
   const initials = (name ?? "?")
     .split(" ")
     .map((p) => p[0])
     .slice(0, 2)
     .join("")
     .toUpperCase();
+
+  const content = emoji ?? initials;
 
   return (
     <div style={{ position: "relative", display: "inline-block" }}>
@@ -31,7 +34,7 @@ export default function Avatar({ name, size = 64, online }: AvatarProps) {
         fontSize: size * 0.4,
       }}
     >
-      {initials}
+      {content}
       </div>
       {online !== undefined && (
         <span

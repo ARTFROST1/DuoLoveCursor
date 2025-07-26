@@ -149,8 +149,8 @@ export async function getSession(sessionId: number) {
 
 // ---------------- Profile ----------------
 export interface ProfileData {
-  user: { id: number; name?: string; avatarId?: number };
-  partner?: { id: number; name?: string; avatarId?: number };
+  user: { id: number; name?: string; avatarId?: number; avatarEmoji?: string };
+  partner?: { id: number; name?: string; avatarId?: number; avatarEmoji?: string };
   partnershipCreatedAt?: string;
   stats: { totalGames: number; wins: number };
   achievements: Array<{

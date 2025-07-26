@@ -12,6 +12,7 @@ interface State {
   inviteToken?: string;
   partnerId?: number;
   partnerName?: string;
+  partnerAvatarEmoji?: string;
   partnerOnline?: boolean;
   partnershipCreatedAt?: string;
 
@@ -27,7 +28,7 @@ interface State {
   setAvatarEmoji: (emoji: string) => void;
   setInviteToken: (t: string) => void;
   setPartnerConnected: (v: boolean) => void;
-  setPartnerData: (id: number, name?: string, online?: boolean, createdAt?: string) => void;
+  setPartnerData: (id: number, name?: string, avatarEmoji?: string, online?: boolean, createdAt?: string) => void;
   setTheme: (theme: "light" | "dark") => void;
   setLanguage: (lang: "ru" | "en") => void;
   setSoundOn: (value: boolean) => void;
@@ -46,6 +47,7 @@ export const useAppStore = create<State>((set) => ({
   inviteToken: undefined,
   partnerId: undefined,
   partnerName: undefined,
+  partnerAvatarEmoji: undefined,
   partnerOnline: undefined,
   partnershipCreatedAt: undefined,
 
@@ -61,8 +63,8 @@ export const useAppStore = create<State>((set) => ({
   setAvatarEmoji: (emoji) => set({ avatarEmoji: emoji }),
   setInviteToken: (t) => set({ inviteToken: t }),
   setPartnerConnected: (v) => set({ partnerConnected: v }),
-  setPartnerData: (id, name, online, createdAt) =>
-    set({ partnerId: id, partnerName: name, partnerOnline: online, partnershipCreatedAt: createdAt }),
+  setPartnerData: (id, name, avatarEmoji, online, createdAt) =>
+    set({ partnerId: id, partnerName: name, partnerAvatarEmoji: avatarEmoji, partnerOnline: online, partnershipCreatedAt: createdAt }),
   setTheme: (theme) => set({ theme }),
   setLanguage: (language) => set({ language }),
   setSoundOn: (soundOn) => set({ soundOn }),

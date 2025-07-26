@@ -2,12 +2,15 @@ import { Server } from "socket.io";
 import prisma from "./prisma";
 
 interface ServerToClientEvents {
+  // Gameplay events
   start: (payload: { countdownMs: number }) => void;
   result: (payload: { winnerId: number }) => void;
   error: (payload: { message: string }) => void;
   choiceProgress: (payload: { exitCount: number; againCount: number }) => void;
   restart: (payload: { sessionId: number }) => void;
   exit: () => void;
+  // Misc events
+  partnerDisconnected: () => void;
 }
 
 interface ClientToServerEvents {
@@ -17,17 +20,24 @@ interface ClientToServerEvents {
 
 export function initSockets(io: Server<ClientToServerEvents, ServerToClientEvents>) {
   // room => firstReactor userId
-  // room => firstReactor userId
   const roomWinner: Map<string, number> = new Map();
   // room => { [userId]: "exit" | "again" }
   const roomChoices: Map<string, Record<number, "exit" | "again">> = new Map();
 
   io.on("connection", async (socket) => {
-    const sessionId = Number(socket.handshake.query.sessionId);
     const userId = Number(socket.handshake.query.userId);
-    if (!sessionId || !userId) {
+    const sessionId = socket.handshake.query.sessionId ? Number(socket.handshake.query.sessionId) : undefined;
+    if (!userId) {
       socket.emit("error", { message: "Invalid params" });
       socket.disconnect();
+      return;
+    }
+
+    // Join personal room for generic notifications
+    socket.join(`user_${userId}`);
+
+    // If not a session connection, stop here
+    if (!sessionId) {
       return;
     }
 

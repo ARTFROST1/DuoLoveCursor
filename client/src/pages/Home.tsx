@@ -14,7 +14,7 @@ import { useAppStore } from "../store";
  * Displays user & partner names / avatars (stub), a days-together counter and a shortcut to the Games list.
  */
 export default function Home() {
-  const { displayName, partnerName, partnershipCreatedAt, partnerOnline, partnerConnected, userId } = useAppStore();
+  const { displayName, avatarEmoji, partnerName, partnerAvatarEmoji, partnershipCreatedAt, partnerOnline, partnerConnected, userId } = useAppStore();
   const navigate = useNavigate();
   const [pendingInvite, setPendingInvite] = useState<GameSession | null>(null);
 
@@ -74,9 +74,9 @@ export default function Home() {
 
       <section style={{ margin: "24px 0", display: "flex", flexDirection: "column", alignItems: "center" }}>
         <div style={{ display: "flex", gap: 16, alignItems: "center" }}>
-          <Avatar name={displayName} size={72} online={true} />
+          <Avatar name={displayName} emoji={avatarEmoji} size={72} online={true} />
           <span style={{ fontSize: 24 }}>+</span>
-          <Avatar name={partnerName} size={72} online={partnerOnline} />
+          <Avatar name={partnerName} emoji={partnerAvatarEmoji} size={72} online={partnerOnline} />
         </div>
         <p style={{ marginTop: 16 }}>Вы вместе уже {daysTogether} дней</p>
       </section>

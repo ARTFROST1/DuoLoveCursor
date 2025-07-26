@@ -48,11 +48,11 @@ export default function Profile() {
       </button>
       {/* header */}
       <div style={{ display: "flex", alignItems: "center", gap: 16 }}>
-        <Avatar name={user.name} size={72} />
+        <Avatar name={user.name} emoji={user.avatarEmoji} size={72} />
         {partner && (
           <>
             <span style={{ fontSize: 24 }}>❤️</span>
-            <Avatar name={partner.name} size={72} online={true} />
+            <Avatar name={partner.name} emoji={partner.avatarEmoji} size={72} online={true} />
           </>
         )}
       </div>

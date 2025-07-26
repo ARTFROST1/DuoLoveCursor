@@ -78,10 +78,22 @@ router.post("/accept", async (req, res) => {
     });
 
     if (!partnership) {
+      // No existing partnership, create a new active one
       await prisma.partnership.create({
         data: {
           user1Id: invite.createdById,
           user2Id: userId,
+          isActive: true,
+          connectedAt: new Date(),
+        },
+      });
+    } else if (!partnership.isActive) {
+      // Partnership existed but was previously disconnected – reactivate it
+      await prisma.partnership.update({
+        where: { id: partnership.id },
+        data: {
+          isActive: true,
+          connectedAt: new Date(),
         },
       });
     }

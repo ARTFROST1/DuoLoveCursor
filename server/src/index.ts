@@ -6,6 +6,7 @@ import authRoutes from "./routes/auth";
 import partnershipRoutes from "./routes/partnership";
 import gamesRoutes from "./routes/games";
 import profileRoutes from "./routes/profile";
+import settingsRoutes from "./routes/settings";
 import gameSessionRoutes from "./routes/gameSession";
 import { createServer } from "http";
 import { Server } from "socket.io";
@@ -24,12 +25,13 @@ app.use("/partnership", partnershipRoutes);
 app.use("/games", gamesRoutes);
 app.use("/game-session", gameSessionRoutes);
 app.use("/profile", profileRoutes);
+app.use("/settings", settingsRoutes);
 
 app.get("/", (_req, res) => {
   res.send("DuoLoveCursor API is running 🚀");
 });
 
-const io = new Server(httpServer, { cors: { origin: "*" } });
+export const io = new Server(httpServer, { cors: { origin: "*" } });
 initSockets(io);
 
 httpServer.listen(PORT, () => {
