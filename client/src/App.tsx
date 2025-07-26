@@ -11,6 +11,7 @@ import { auth, getPartnershipStatus } from "./api";
 import { useAppStore } from "./store";
 import Welcome from "./pages/Welcome";
 import BottomNav from "./components/BottomNav";
+import Settings from "./pages/Settings";
 
 
 export default function App() {
@@ -60,6 +61,7 @@ export default function App() {
       <Route path="/invite/:token" element={<InviteAccept />} />
       <Route path="/game/:slug" element={<GameScreen />} />
       <Route path="/profile" element={<Profile />} />
+<Route path="/settings" element={<Settings />} />
 
 
 

@@ -31,7 +31,21 @@ export default function Profile() {
   const { user, partner, stats, achievements, history, partnershipCreatedAt } = data;
 
   return (
-    <div style={{ padding: 16, paddingBottom: 72 }}>
+    <div style={{ padding: 16, paddingBottom: 72, position: "relative" }}>
+      <button
+        onClick={() => navigate("/settings")}
+        style={{
+          position: "absolute",
+          top: 8,
+          right: 8,
+          fontSize: 24,
+          background: "none",
+          border: "none",
+          cursor: "pointer",
+        }}
+      >
+        ⚙️
+      </button>
       {/* header */}
       <div style={{ display: "flex", alignItems: "center", gap: 16 }}>
         <Avatar name={user.name} size={72} />

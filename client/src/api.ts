@@ -176,6 +176,36 @@ export interface ProfileData {
   }>;
 }
 
+// ---------------- Settings ----------------
+export interface UserSettings {
+  avatarEmoji?: string;
+  displayName?: string;
+  theme?: "light" | "dark";
+  language?: "ru" | "en";
+  soundOn?: boolean;
+  notificationsOn?: boolean;
+}
+
+export async function updateSettings(userId: number, settings: UserSettings) {
+  const res = await fetch(`${API_URL}/settings/update`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ userId, settings }),
+  });
+  if (!res.ok) throw new Error("Failed to update settings");
+  return res.json();
+}
+
+export async function disconnectPartnership(userId: number) {
+  const res = await fetch(`${API_URL}/partnership/disconnect`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ userId }),
+  });
+  if (!res.ok) throw new Error("Failed to disconnect partnership");
+  return res.json();
+}
+
 export async function getProfile(userId: number) {
   const res = await fetch(`${API_URL}/profile/${userId}`);
   if (!res.ok) throw new Error("Failed to fetch profile");
