@@ -70,15 +70,16 @@ export default function Home() {
 
   return (
     <div style={{ padding: 16 }}>
-      <h1>Привет{displayName ? ", " + displayName : ""}! 🤝</h1>
 
-      <section style={{ margin: "24px 0", display: "flex", flexDirection: "column", alignItems: "center" }}>
+
+      <section style={{ marginBottom: 24, display: "flex", flexDirection: "column", alignItems: "center" }}>
         <div style={{ display: "flex", gap: 16, alignItems: "center" }}>
           <Avatar name={displayName} emoji={avatarEmoji} size={72} online={true} />
-          <span style={{ fontSize: 24 }}>+</span>
+          <span style={{ fontSize: 24 }}>❤️</span>
           <Avatar name={partnerName} emoji={partnerAvatarEmoji} size={72} online={partnerOnline} />
         </div>
-        <p style={{ marginTop: 16 }}>Вы вместе уже {daysTogether} дней</p>
+        <p style={{ marginTop: 8, fontSize: 18 }}>{displayName} + {partnerName}</p>
+        <p style={{ marginTop: 12 }}>Вы вместе уже {daysTogether} дней</p>
       </section>
 
       {/* Carousel section */}

@@ -33,6 +33,7 @@ export default function App() {
           .then((profile: ProfileData) => {
             const { user, partner, partnershipCreatedAt } = profile;
             useAppStore.getState().setAvatarEmoji(user.avatarEmoji ?? undefined);
+            useAppStore.getState().setDisplayName(user.name ?? undefined);
             if (partner) {
               useAppStore.getState().setPartnerData(
                 partner.id,

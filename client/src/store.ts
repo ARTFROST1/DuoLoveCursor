@@ -24,8 +24,8 @@ interface State {
 
   // --- Actions ---
   setUser: (userId: number, telegramId: string, displayName?: string) => void;
-  setDisplayName: (name: string) => void;
-  setAvatarEmoji: (emoji: string) => void;
+  setDisplayName: (name?: string) => void;
+  setAvatarEmoji: (emoji?: string) => void;
   setInviteToken: (t: string) => void;
   setPartnerConnected: (v: boolean) => void;
   setPartnerData: (id: number, name?: string, avatarEmoji?: string, online?: boolean, createdAt?: string) => void;
