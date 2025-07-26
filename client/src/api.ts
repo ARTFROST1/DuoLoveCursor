@@ -146,3 +146,38 @@ export async function getSession(sessionId: number) {
   if (!res.ok) throw new Error("Failed to fetch session");
   return res.json() as Promise<GameSession>;
 }
+
+// ---------------- Profile ----------------
+export interface ProfileData {
+  user: { id: number; name?: string; avatarId?: number };
+  partner?: { id: number; name?: string; avatarId?: number };
+  partnershipCreatedAt?: string;
+  stats: { totalGames: number; wins: number };
+  achievements: Array<{
+    id: number;
+    achievedAt?: string;
+    progress: number;
+    achievement: {
+      id: number;
+      emoji: string;
+      title: string;
+      description: string;
+      goal: number;
+    };
+  }>;
+  history: Array<{
+    id: number;
+    playedAt: string;
+    resultShort?: string;
+    gameSession: {
+      id: number;
+      game: Game;
+    };
+  }>;
+}
+
+export async function getProfile(userId: number) {
+  const res = await fetch(`${API_URL}/profile/${userId}`);
+  if (!res.ok) throw new Error("Failed to fetch profile");
+  return res.json() as Promise<ProfileData>;
+}
