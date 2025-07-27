@@ -1,7 +1,7 @@
 import { useMutation } from "@tanstack/react-query";
 import { useNavigate } from "react-router-dom";
 import { useEffect } from "react";
-import { createInvite, getPartnershipStatus } from "../api";
+import { createInvite, getPartnershipStatus, getProfile, type ProfileData } from "../api";
 import { useAppStore } from "../store";
 
 export default function Welcome() {
@@ -11,7 +11,24 @@ export default function Welcome() {
     setInviteToken,
     partnerConnected,
     setPartnerConnected,
+    setPartnerData,
+    setDisplayName,
+    setAvatarEmoji,
   } = useAppStore();
+
+  async function refreshProfile() {
+    try {
+      const profile: ProfileData = await getProfile(userId);
+      const { user, partner, partnershipCreatedAt } = profile;
+      setDisplayName(user.name ?? undefined);
+      setAvatarEmoji(user.avatarEmoji ?? undefined);
+      if (partner) {
+        setPartnerData(partner.id, partner.name, partner.avatarEmoji, undefined, partnershipCreatedAt);
+      }
+    } catch (err) {
+      console.error("refreshProfile failed", err);
+    }
+  }
 
   // Poll every 3s until partner connects
   const navigate = useNavigate();
@@ -26,12 +43,16 @@ export default function Welcome() {
   // polling loop
   useEffect(() => {
     if (!inviteToken || partnerConnected) return;
-    const id = setInterval(() => {
-      getPartnershipStatus(userId)
-        .then((data) => {
-          if (data.connected) setPartnerConnected(true);
-        })
-        .catch(console.error);
+    const id = setInterval(async () => {
+      try {
+        const data = await getPartnershipStatus(userId);
+        if (data.connected) {
+          setPartnerConnected(true);
+          await refreshProfile();
+        }
+      } catch (err) {
+        console.error(err);
+      }
     }, 3000);
     return () => clearInterval(id);
   }, [inviteToken, partnerConnected, userId, setPartnerConnected]);

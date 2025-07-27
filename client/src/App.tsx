@@ -48,12 +48,18 @@ export default function App() {
 
         // Check if user already has a partner
         getPartnershipStatus(id)
-          .then((data: { connected: boolean; createdAt?: string; partner?: { id: number; name?: string } }) => {
+          .then(async (data: { connected: boolean; createdAt?: string; partner?: { id: number; name?: string } }) => {
             if (data.connected) {
-              const { partner, createdAt } = data;
               useAppStore.getState().setPartnerConnected(true);
-              if (partner) {
-                useAppStore.getState().setPartnerData(partner.id, partner.name, undefined /* avatarEmoji */, undefined /* online */, createdAt);
+              // Fetch full profile to get complete partner/user info
+              try {
+                const profile: ProfileData = await getProfile(id);
+                const { partner, partnershipCreatedAt } = profile;
+                if (partner) {
+                  useAppStore.getState().setPartnerData(partner.id, partner.name, partner.avatarEmoji, undefined, partnershipCreatedAt);
+                }
+              } catch (err) {
+                console.error("getProfile failed", err);
               }
             }
           })
@@ -62,10 +68,15 @@ export default function App() {
       .catch(console.error);
   }, [setUser]);
 
-  // If launched with start_param (deep link), redirect to invite accept route
+  // If launched with start_param (deep link), redirect to invite accept route only when not yet connected
   useEffect(() => {
     const startParam = (tg.initDataUnsafe as any)?.start_param as string | undefined;
-    if (startParam) {
+    if (!startParam) return;
+    const { partnerConnected } = useAppStore.getState();
+    if (partnerConnected) return; // already processed invite
+
+    // Avoid infinite loop: navigate only if current pathname differs
+    if (window.location.pathname !== `/invite/${startParam}`) {
       navigate(`/invite/${startParam}`);
     }
   }, [navigate]);
