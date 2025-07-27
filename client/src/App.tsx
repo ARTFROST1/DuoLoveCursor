@@ -19,6 +19,7 @@ export default function App() {
   const setUser = useAppStore((s) => s.setUser);
   const navigate = useNavigate();
   const socketRef = useRef<any>(null);
+  const userId = useAppStore((s) => s.userId);
 
   // Authenticate user on load
   useEffect(() => {
@@ -83,14 +84,14 @@ export default function App() {
 
   // Connect Socket.IO for generic notifications (partnerDisconnected)
   useEffect(() => {
-    const { userId } = useAppStore.getState();
     if (!userId) return;
-    // Avoid reconnecting
+    // Avoid reconnecting if socket already exists for this user
     if (socketRef.current) return;
+
     const socket = socketIO("", { query: { userId } });
     socket.on("partnerDisconnected", () => {
       useAppStore.getState().setPartnerConnected(false);
-      navigate("/welcome", { replace: true });
+      navigate("/welcome", { replace: true, state: { partnerDisconnected: true } });
     });
     socketRef.current = socket;
 
@@ -98,7 +99,7 @@ export default function App() {
       socket.disconnect();
       socketRef.current = null;
     };
-  }, []);
+  }, [userId, navigate]);
   
 
   

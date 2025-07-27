@@ -1,10 +1,11 @@
 import { useMutation } from "@tanstack/react-query";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
 import { useEffect } from "react";
 import { createInvite, getPartnershipStatus, getProfile, type ProfileData } from "../api";
 import { useAppStore } from "../store";
 
 export default function Welcome() {
+  const location = useLocation() as { state?: { partnerDisconnected?: boolean } };
   const {
     userId,
     inviteToken,
@@ -71,6 +72,9 @@ export default function Welcome() {
 
   return (
     <div style={{ padding: 16 }}>
+      {location.state?.partnerDisconnected && (
+        <p style={{ color: "red" }}>Ваш партнёр разорвал связь</p>
+      )}
       <h1>Добро пожаловать 👋</h1>
       <p>
         Поделитесь ссылкой с партнёром, чтобы начать играть вместе. Когда партнёр
