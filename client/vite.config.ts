@@ -45,6 +45,10 @@ export default defineConfig({
       "/settings": {
         target: "http://localhost:4000",
         changeOrigin: true,
+      },
+      "/stats": {
+        target: "http://localhost:4000",
+        changeOrigin: true,
       }
     }
   },

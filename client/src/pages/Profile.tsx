@@ -2,7 +2,7 @@ import { useAppStore } from "../store";
 import { useNavigate } from "react-router-dom";
 import { useEffect, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { getProfile, type ProfileData } from "../api";
+import { getProfile, type ProfileData, getStats, type StatsResponse } from "../api";
 import Avatar from "../components/Avatar";
 
 export default function Profile() {
@@ -23,12 +23,33 @@ export default function Profile() {
     refetchInterval: 15000,
   });
 
+  const {
+    data: statsData,
+    isLoading: statsLoading,
+    error: statsError,
+  } = useQuery<StatsResponse>({
+    queryKey: ["stats", userId],
+    queryFn: () => getStats(userId),
+    enabled: !!userId && partnerConnected,
+    refetchInterval: 15000,
+  });
+
   const [tab, setTab] = useState<"stats" | "achievements" | "history">("stats");
 
   if (isLoading) return <div style={{ padding: 16 }}>Загрузка…</div>;
   if (error || !data) return <div style={{ padding: 16 }}>Ошибка загрузки профиля</div>;
 
-  const { user, partner, stats, achievements, history, partnershipCreatedAt } = data;
+  const { user, partner, achievements, history, partnershipCreatedAt } = data;
+
+  const formatDuration = (ms: number) => {
+    const totalMinutes = Math.round(ms / 60000);
+    const days = Math.floor(totalMinutes / (60 * 24));
+    const hours = Math.floor((totalMinutes % (60 * 24)) / 60);
+    const minutes = totalMinutes % 60;
+    if (days > 0) return `${days} д ${hours} ч`;
+    if (hours > 0) return `${hours} ч ${minutes} мин`;
+    return `${minutes} мин`;
+  };
 
   return (
     <div style={{ padding: 16, paddingBottom: 72, position: "relative" }}>
@@ -87,11 +108,73 @@ export default function Profile() {
 
       {/* content */}
       {tab === "stats" && (
-        <div style={{ marginTop: 16 }}>
-          <p>Всего игр: {stats.totalGames}</p>
-          <p>Побед: {stats.wins}</p>
-          <p>Win-rate: {stats.totalGames ? Math.round((stats.wins / stats.totalGames) * 100) : 0}%</p>
-        </div>
+        <>
+          {statsError ? (
+            <div style={{ padding: 8 }}>Ошибка загрузки статистики</div>
+          ) : statsLoading ? (
+            <div style={{ padding: 8 }}>Загрузка статистики…</div>
+          ) : !statsData ? (
+            <div style={{ padding: 8 }}>Нет данных</div>
+          ) : (
+            <div style={{ marginTop: 16, display: "flex", flexDirection: "column", gap: 16 }}>
+              {/* summary */}
+              <p>
+                Вы провели <strong>{formatDuration(statsData.personal.totalTimeMs)}</strong> в игре и сыграли вместе
+                <strong> {statsData.couple?.totalGamesTogether ?? statsData.personal.totalGames}</strong> раз — так держать!
+              </p>
+
+              {/* Personal */}
+              <h3>Личное</h3>
+              <ul style={{ listStyle: "none", padding: 0, margin: 0 }}>
+                <li title="Суммарное время, проведённое в играх">⏱ Общее время онлайн: {formatDuration(statsData.personal.totalTimeMs)}</li>
+                <li title="Количество сыгранных игр">🎮 Всего игр: {statsData.personal.totalGames}</li>
+                <li title="Победные игры">🏆 Победы: {statsData.personal.wins}</li>
+                <li title="Проигрышные игры">❌ Поражения: {statsData.personal.losses}</li>
+                <li title="Игры, закончившиеся ничьёй">➗ Ничьи: {statsData.personal.draws}</li>
+                <li title="Процент побед ко всем играм">✅ Успешность: {statsData.personal.successRate}%</li>
+                {statsData.personal.reactionAvgMs != null && (
+                  <li title="Среднее время реакции в миллисекундах">⚡ Средняя реакция: {statsData.personal.reactionAvgMs} мс</li>
+                )}
+                {statsData.personal.favoriteGame && (
+                  <li title="Игра, в которую вы играли чаще всего">
+                    ⭐ Любимая игра: {statsData.personal.favoriteGame.title} ({statsData.personal.favoriteGame.count})
+                  </li>
+                )}
+                {/* Games by category */}
+                {Object.keys(statsData.personal.gamesByCategory).length > 0 && (
+                  <li title="Распределение игр по категориям">📊 По типам:
+                    <ul style={{ listStyle: "none", paddingLeft: 16 }}>
+                      {Object.entries(statsData.personal.gamesByCategory).map(([cat, count]) => (
+                        <li key={cat}>{cat}: {count}</li>
+                      ))}
+                    </ul>
+                  </li>
+                )}
+                
+              </ul>
+
+              {/* Couple */}
+              {statsData.couple && (
+                <>
+                  <h3>Пара</h3>
+                  <ul style={{ listStyle: "none", padding: 0, margin: 0 }}>
+                    <li title="Дней вместе">💖 Дней вместе: {statsData.couple.daysTogether}</li>
+                    {statsData.couple.mostPlayedGameTogether && (
+                      <li>
+                        🎲 Самая популярная игра: {statsData.couple.mostPlayedGameTogether.title} (
+                        {statsData.couple.mostPlayedGameTogether.count})
+                      </li>
+                    )}
+                    <li>🎯 Co-op завершено: {statsData.couple.coOpSuccessRate}%</li>
+                    <li>🔄 Sync Score: {statsData.couple.syncScore}%</li>
+                    <li>🕒 Средняя активность: {statsData.couple.avgDailyActivityMin} мин/день</li>
+                    <li>💬 Обсуждений: {statsData.couple.discussionCount}</li>
+                  </ul>
+                </>
+              )}
+            </div>
+          )}
+        </>
       )}
 
       {tab === "achievements" && (

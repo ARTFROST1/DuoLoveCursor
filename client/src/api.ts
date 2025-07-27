@@ -211,3 +211,33 @@ export async function getProfile(userId: number) {
   if (!res.ok) throw new Error("Failed to fetch profile");
   return res.json() as Promise<ProfileData>;
 }
+
+// ---------------- Stats ----------------
+export interface StatsResponse {
+  personal: {
+    totalTimeMs: number;
+    totalGames: number;
+    gamesByCategory: Record<string, number>;
+    favoriteGame?: { id: number; title: string; count: number };
+    wins: number;
+    losses: number;
+    draws: number;
+    reactionAvgMs?: number | null;
+    successRate: number;
+  };
+  couple?: {
+    daysTogether: number;
+    totalGamesTogether: number;
+    mostPlayedGameTogether?: { id: number; title: string; count: number };
+    coOpSuccessRate: number;
+    avgDailyActivityMin: number;
+    discussionCount: number;
+    syncScore: number;
+  } | null;
+}
+
+export async function getStats(userId: number) {
+  const res = await fetch(`${API_URL}/stats/${userId}`);
+  if (!res.ok) throw new Error("Failed to fetch stats");
+  return res.json() as Promise<StatsResponse>;
+}
