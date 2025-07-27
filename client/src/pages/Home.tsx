@@ -74,9 +74,13 @@ export default function Home() {
 
       <section style={{ marginBottom: 24, display: "flex", flexDirection: "column", alignItems: "center" }}>
         <div style={{ display: "flex", gap: 16, alignItems: "center" }}>
-          <Avatar name={displayName} emoji={avatarEmoji} size={72} online={true} />
+          <div onClick={() => navigate("/profile")} style={{ cursor: "pointer" }}>
+            <Avatar name={displayName} emoji={avatarEmoji} size={72} online={true} />
+          </div>
           <span style={{ fontSize: 24 }}>❤️</span>
-          <Avatar name={partnerName} emoji={partnerAvatarEmoji} size={72} online={partnerOnline} />
+          <div onClick={() => navigate("/partner")} style={{ cursor: "pointer" }}>
+            <Avatar name={partnerName} emoji={partnerAvatarEmoji} size={72} online={partnerOnline} />
+          </div>
         </div>
         <p style={{ marginTop: 8, fontSize: 18 }}>{displayName} + {partnerName}</p>
         <p style={{ marginTop: 12 }}>Вы вместе уже {daysTogether} дней</p>

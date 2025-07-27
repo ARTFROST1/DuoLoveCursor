@@ -13,6 +13,7 @@ import { useAppStore } from "./store";
 import Welcome from "./pages/Welcome";
 import BottomNav from "./components/BottomNav";
 import Settings from "./pages/Settings";
+import PartnerProfile from "./pages/PartnerProfile";
 
 
 export default function App() {
@@ -113,6 +114,7 @@ export default function App() {
       <Route path="/invite/:token" element={<InviteAccept />} />
       <Route path="/game/:slug" element={<GameScreen />} />
       <Route path="/profile" element={<Profile />} />
+      <Route path="/partner" element={<PartnerProfile />} />
 <Route path="/settings" element={<Settings />} />
 
 

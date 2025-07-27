@@ -5,52 +5,45 @@ import { useQuery } from "@tanstack/react-query";
 import { getProfile, type ProfileData } from "../api";
 import Avatar from "../components/Avatar";
 
-export default function Profile() {
-  const { userId, partnerConnected } = useAppStore();
+/**
+ * Profile page that shows partner's view. Identical to Profile but without the settings button.
+ */
+export default function PartnerProfile() {
+  const { partnerId, partnerConnected } = useAppStore();
   const navigate = useNavigate();
 
-  // redirect if onboarding not finished
+  // Guard: if partnership not setup yet or no partnerId -> redirect home
   useEffect(() => {
     if (!partnerConnected) {
       navigate("/welcome", { replace: true });
+      return;
     }
-  }, [partnerConnected, navigate]);
+    if (!partnerId) {
+      navigate("/", { replace: true });
+    }
+  }, [partnerConnected, partnerId, navigate]);
 
   const { data, isLoading, error } = useQuery<ProfileData>({
-    queryKey: ["profile", userId],
-    queryFn: () => getProfile(userId),
-    enabled: !!userId && partnerConnected,
+    queryKey: ["partnerProfile", partnerId],
+    queryFn: () => getProfile(partnerId!),
+    enabled: !!partnerId && partnerConnected,
     refetchInterval: 15000,
   });
 
   const [tab, setTab] = useState<"stats" | "achievements" | "history">("stats");
 
   if (isLoading) return <div style={{ padding: 16 }}>Загрузка…</div>;
-  if (error || !data) return <div style={{ padding: 16 }}>Ошибка загрузки профиля</div>;
+  if (error || !data) return <div style={{ padding: 16 }}>Ошибка загрузки профиля партнёра</div>;
 
   const { user, partner, stats, achievements, history, partnershipCreatedAt } = data;
 
   return (
     <div style={{ padding: 16, paddingBottom: 72, position: "relative" }}>
-      <button
-        onClick={() => navigate("/settings")}
-        style={{
-          position: "absolute",
-          top: 8,
-          right: 8,
-          fontSize: 24,
-          background: "none",
-          border: "none",
-          cursor: "pointer",
-        }}
-      >
-        ⚙️
-      </button>
       {/* header */}
       <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 12 }}>
         <Avatar name={user.name} emoji={user.avatarEmoji} size={96} />
         {partner && (
-          <div onClick={() => navigate("/partner")} style={{ cursor: "pointer", padding: 8, background: "var(--tg-theme-bg-color,#f0f0f0)", borderRadius: 8 }}>
+          <div onClick={() => navigate("/profile")} style={{ cursor: "pointer", padding: 8, background: "var(--tg-theme-bg-color,#f0f0f0)", borderRadius: 8 }}>
             В паре с: <strong>{partner.name}</strong>
           </div>
         )}
