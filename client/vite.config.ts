@@ -49,6 +49,10 @@ export default defineConfig({
       "/stats": {
         target: "http://localhost:4000",
         changeOrigin: true,
+      },
+      "/achievements": {
+        target: "http://localhost:4000",
+        changeOrigin: true,
       }
     }
   },

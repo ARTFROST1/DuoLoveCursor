@@ -7,6 +7,8 @@ import partnershipRoutes from "./routes/partnership";
 import gamesRoutes from "./routes/games";
 import profileRoutes from "./routes/profile";
 import statsRoutes from "./routes/stats";
+import achievementsRoutes from "./routes/achievements";
+import { syncAchievementsToDB } from "./services/achievementService";
 import settingsRoutes from "./routes/settings";
 import gameSessionRoutes from "./routes/gameSession";
 import { createServer } from "http";
@@ -28,6 +30,10 @@ app.use("/game-session", gameSessionRoutes);
 app.use("/profile", profileRoutes);
 app.use("/stats", statsRoutes);
 app.use("/settings", settingsRoutes);
+app.use("/achievements", achievementsRoutes);
+
+// Ensure achievements definitions exist in DB on startup
+syncAchievementsToDB().catch(console.error);
 
 app.get("/", (_req, res) => {
   res.send("DuoLoveCursor API is running 🚀");

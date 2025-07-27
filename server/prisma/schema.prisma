@@ -12,7 +12,7 @@ model User {
   telegramId   String   @unique
   displayName  String?
   avatarId     Int?
-  avatarEmoji String?
+  avatarEmoji  String?
   onlineStatus Boolean  @default(false)
   createdAt    DateTime @default(now())
 
@@ -21,7 +21,7 @@ model User {
   partnerships2    Partnership[]     @relation("User2")
   gameSessions1    GameSession[]     @relation("Partner1")
   gameSessions2    GameSession[]     @relation("Partner2")
-  gamesWon        GameSession[]     @relation("WinnerSessions")
+  gamesWon         GameSession[]     @relation("WinnerSessions")
   invitesCreated   Invite[]          @relation("InvitesCreated")
   invitesUsed      Invite[]          @relation("InvitesUsed")
   userAchievements UserAchievement[]
@@ -38,7 +38,8 @@ model Partnership {
   connectedAt DateTime @default(now())
   isActive    Boolean  @default(true)
 
-  gameSessions GameSession[]
+  gameSessions       GameSession[]
+  coupleAchievements CoupleAchievement[]
 }
 
 model Game {
@@ -54,33 +55,52 @@ model Game {
 }
 
 model GameSession {
-  id         Int       @id @default(autoincrement())
-  game       Game      @relation(fields: [gameId], references: [id])
-  gameId     Int
-  partner1   User      @relation("Partner1", fields: [partner1Id], references: [id])
-  partner1Id Int
-  partner2   User      @relation("Partner2", fields: [partner2Id], references: [id])
-  partner2Id Int
-  startedAt  DateTime  @default(now())
-  endedAt    DateTime?
-  resultJson Json?
-  partner2Accepted Boolean @default(false)
-  winner       User?     @relation("WinnerSessions", fields: [winnerId], references: [id])
-  winnerId     Int?
+  id               Int       @id @default(autoincrement())
+  game             Game      @relation(fields: [gameId], references: [id])
+  gameId           Int
+  partner1         User      @relation("Partner1", fields: [partner1Id], references: [id])
+  partner1Id       Int
+  partner2         User      @relation("Partner2", fields: [partner2Id], references: [id])
+  partner2Id       Int
+  startedAt        DateTime  @default(now())
+  endedAt          DateTime?
+  resultJson       Json?
+  partner2Accepted Boolean   @default(false)
+  winner           User?     @relation("WinnerSessions", fields: [winnerId], references: [id])
+  winnerId         Int?
 
   histories     History[]
   Partnership   Partnership? @relation(fields: [partnershipId], references: [id])
   partnershipId Int?
 }
 
+enum AchievementScope {
+  INDIVIDUAL
+  COUPLE
+}
+
 model Achievement {
-  id          Int    @id @default(autoincrement())
+  id          Int              @id @default(autoincrement())
+  slug        String           @unique
   emoji       String
   title       String
   description String
-  goal        Int
+  category    String
+  goal        Int?
+  scope       AchievementScope @default(INDIVIDUAL)
 
-  userAchievements UserAchievement[]
+  userAchievements   UserAchievement[]
+  coupleAchievements CoupleAchievement[]
+}
+
+model CoupleAchievement {
+  id            Int         @id @default(autoincrement())
+  partnership   Partnership @relation(fields: [partnershipId], references: [id])
+  partnershipId Int
+  achievement   Achievement @relation(fields: [achievementId], references: [id])
+  achievementId Int
+  progress      Int         @default(0)
+  achievedAt    DateTime?
 }
 
 model UserAchievement {
@@ -121,7 +141,7 @@ model Settings {
   language      String  @default("ru")
   soundEnabled  Boolean @default(true)
   notifications Boolean @default(true)
-  avatarEmoji  String?
+  avatarEmoji   String?
 }
 
 /**

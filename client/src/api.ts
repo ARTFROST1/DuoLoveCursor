@@ -206,6 +206,25 @@ export async function disconnectPartnership(userId: number) {
   return res.json();
 }
 
+// ---------------- Achievements ----------------
+export interface AchievementItem {
+  slug: string;
+  emoji: string;
+  title: string;
+  description: string;
+  category: string;
+  goal?: number;
+  unlocked: boolean;
+  progress: number;
+  achievedAt?: string;
+}
+
+export async function getAchievements(userId: number) {
+  const res = await fetch(`${API_URL}/achievements/${userId}`);
+  if (!res.ok) throw new Error("Failed to fetch achievements");
+  return res.json() as Promise<AchievementItem[]>;
+}
+
 export async function getProfile(userId: number) {
   const res = await fetch(`${API_URL}/profile/${userId}`);
   if (!res.ok) throw new Error("Failed to fetch profile");

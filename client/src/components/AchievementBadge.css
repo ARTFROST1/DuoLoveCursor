@@ -1,0 +1,67 @@
+.badge-card{
+  width:100%;
+  aspect-ratio: 1 / 1.1;
+
+
+  position:relative;
+  background:var(--tg-theme-bg-color,#fff);
+  border:1px solid #ddd;
+  border-radius:8px;
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  justify-content:center;
+  gap:4px;
+  padding:8px 4px;
+  font-size:12px;
+  text-align:center;
+  transition:transform .15s ease;
+}
+.badge-card:hover{transform:translateY(-4px);}
+.badge-card.locked{opacity:0.4;}
+.badge-emoji{font-size:32px;}
+.badge-title{font-weight:600;}
+.badge-status{font-size:10px;color:#555;}
+.badge-progress-container{
+  width:100%;
+  height:6px;
+  margin-top:4px;
+  align-self:stretch;
+  background:var(--tg-theme-bg-color,#eee);
+  border-radius:4px;
+  overflow:hidden;
+}
+.badge-progress-bar{
+  height:100%;
+  background:#6da9ff;
+}
+.badge-popup{
+  position:absolute;
+  top:-4px;
+  left:50%;
+  transform:translate(-50%,-100%);
+  background:var(--tg-theme-secondary-bg-color,#333);
+  border:1px solid rgba(0,0,0,0.2);
+  border-radius:8px;
+  padding:8px 10px;
+  width:200px;
+  box-shadow:0 2px 6px rgba(0,0,0,0.2);
+  z-index:20;
+  color:var(--tg-theme-text-color,#fff);
+}
+.badge-popup::after{
+  content:"";
+  position:absolute;
+  bottom:-6px;
+  left:50%;
+  transform:translateX(-50%);
+  border-width:6px 6px 0 6px;
+  border-style:solid;
+  border-color:var(--tg-theme-secondary-bg-color,#333) transparent transparent transparent;
+}
+.achievements-grid{
+  display:grid;
+  grid-template-columns:repeat(2,1fr);
+  gap:8px;
+}
+

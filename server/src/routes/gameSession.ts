@@ -45,7 +45,8 @@ router.post("/start", async (req, res) => {
         gameId: game.id,
         partner1Id: userId,
         partner2Id: partnerId,
-      },
+        partnershipId: partnership.id,
+      }
     });
     res.json({ sessionId: session.id });
   } catch (err) {

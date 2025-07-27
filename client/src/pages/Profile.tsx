@@ -1,9 +1,14 @@
 import { useAppStore } from "../store";
 import { useNavigate } from "react-router-dom";
 import { useEffect, useState } from "react";
+import AchievementBadge from "../components/AchievementBadge";
+import { getAchievements, type AchievementItem } from "../api";
+import { useAchievementSocket } from "../hooks/useAchievementSocket";
 import { useQuery } from "@tanstack/react-query";
 import { getProfile, type ProfileData, getStats, type StatsResponse } from "../api";
 import Avatar from "../components/Avatar";
+import AchievementToast from "../components/AchievementToast";
+import { type AchievementUnlockedPayload } from "../hooks/useAchievementSocket";
 
 export default function Profile() {
   const { userId, partnerConnected } = useAppStore();
@@ -35,11 +40,36 @@ export default function Profile() {
   });
 
   const [tab, setTab] = useState<"stats" | "achievements" | "history">("stats");
+  const [categoryFilter, setCategoryFilter] = useState<string>("all");
+  const [hideCompleted, setHideCompleted] = useState<boolean>(false);
+  const [toast, setToast] = useState<AchievementUnlockedPayload | null>(null);
+
+  // Achievements list
+  const {
+    data: achievementsData,
+    isLoading: achLoading,
+    error: achError,
+    refetch: refetchAchievements,
+  } = useQuery<AchievementItem[]>({
+    queryKey: ["achievements", userId],
+    queryFn: () => getAchievements(userId),
+    enabled: !!userId,
+  });
+
+  // socket listener for real-time unlocking
+  useAchievementSocket(
+    userId,
+    (payload) => {
+      setToast(payload);
+      refetchAchievements();
+    },
+    true,
+  );
 
   if (isLoading) return <div style={{ padding: 16 }}>Загрузка…</div>;
   if (error || !data) return <div style={{ padding: 16 }}>Ошибка загрузки профиля</div>;
 
-  const { user, partner, achievements, history, partnershipCreatedAt } = data;
+  const { user, partner, history, partnershipCreatedAt } = data;
 
   const formatDuration = (ms: number) => {
     const totalMinutes = Math.round(ms / 60000);
@@ -74,6 +104,15 @@ export default function Profile() {
           <div onClick={() => navigate("/partner")} style={{ cursor: "pointer", padding: 8, background: "var(--tg-theme-bg-color,#f0f0f0)", borderRadius: 8 }}>
             В паре с: <strong>{partner.name}</strong>
           </div>
+        )}
+        {/* Toast */}
+        {toast && (
+          <AchievementToast
+            key={toast.slug}
+            emoji={toast.emoji}
+            title={toast.title}
+            onClose={() => setToast(null)}
+          />
         )}
       </div>
       {partnershipCreatedAt && (
@@ -178,30 +217,55 @@ export default function Profile() {
       )}
 
       {tab === "achievements" && (
-        <div style={{ marginTop: 16, display: "grid", gap: 12 }}>
-          {achievements.map((a) => (
-            <div
-              key={a.id}
-              style={{
-                display: "flex",
-                alignItems: "center",
-                gap: 12,
-                padding: 8,
-                border: "1px solid #ddd",
-                borderRadius: 8,
-              }}
-            >
-              <span style={{ fontSize: 32 }}>{a.achievement.emoji}</span>
-              <div>
-                <strong>{a.achievement.title}</strong>
-                <p style={{ margin: 0, fontSize: 12, color: "#555" }}>{a.achievement.description}</p>
-                <p style={{ margin: 0, fontSize: 12 }}>
-                  {a.progress}/{a.achievement.goal}
-                </p>
-              </div>
+        <div style={{ marginTop: 16 }}>
+          {/* Filters */}
+          <div style={{ marginBottom: 8, display: "flex", gap: 8, alignItems: "center" }}>
+            <select value={categoryFilter} onChange={(e)=>setCategoryFilter(e.target.value)}>
+              <option value="all">Все категории</option>
+              {Array.from(new Set(achievementsData?.map((a)=>a.category))).map((cat)=>(
+                <option key={cat} value={cat}>{cat}</option>
+              ))}
+            </select>
+            <label style={{ display: "flex", alignItems: "center", gap: 4 }}>
+              <input type="checkbox" checked={hideCompleted} onChange={(e)=>setHideCompleted(e.target.checked)} />
+              Скрыть выполненные
+            </label>
+          </div>
+          {achError ? (
+            <p>Ошибка загрузки достижений</p>
+          ) : achLoading ? (
+            <p>Загрузка достижений…</p>
+          ) : !achievementsData ? (
+            <p>Нет данных</p>
+          ) : (
+            <div className="achievements-grid">
+              {[...achievementsData]
+                .filter((a)=>{
+                  if(hideCompleted && a.unlocked) return false;
+                  if(categoryFilter!=="all" && a.category!==categoryFilter) return false;
+                  return true;
+                })
+                .sort((a, b) => {
+                  if (a.unlocked !== b.unlocked) return a.unlocked ? -1 : 1;
+                  const compA = a.goal ? (a.progress / a.goal) : 0;
+                  const compB = b.goal ? (b.progress / b.goal) : 0;
+                  return compB - compA;
+                })
+                .map((a) => (
+                <AchievementBadge
+                  key={a.slug}
+                  emoji={a.emoji}
+                  title={a.title}
+                  description={a.description}
+                  unlocked={a.unlocked}
+                  progress={a.progress}
+                  goal={a.goal}
+                  achievedAt={a.achievedAt}
+                />
+              ))}
+              {achievementsData.length === 0 && <p>Нет доступных достижений</p>}
             </div>
-          ))}
-          {achievements.length === 0 && <p>Ещё нет достижений</p>}
+          )}
         </div>
       )}
 

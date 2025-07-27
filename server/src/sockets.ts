@@ -1,7 +1,11 @@
 import { Server } from "socket.io";
 import prisma from "./prisma";
+import { processGameSessionResult } from "./services/achievementService";
+import { ACHIEVEMENTS } from "./achievements";
 
 interface ServerToClientEvents {
+  // Achievement events
+  achievementUnlocked: (payload: { slug: string; emoji: string; title: string }) => void;
   // Gameplay events
   start: (payload: { countdownMs: number }) => void;
   result: (payload: { winnerId: number }) => void;
@@ -78,6 +82,29 @@ export function initSockets(io: Server<ClientToServerEvents, ServerToClientEvent
       roomWinner.set(room, userId);
       io.to(room).emit("result", { winnerId: userId });
 
+      // Process achievements related to game session finish
+      const unlocked = await processGameSessionResult({
+        partnershipId: session.partnershipId!,
+        partner1Id: session.partner1Id,
+        partner2Id: session.partner2Id,
+        winnerId: userId,
+      });
+      // Notify both partners if unlocked
+      unlocked.forEach((slug: string) => {
+        const def = ACHIEVEMENTS.find((a) => a.slug === slug);
+        if (!def) return;
+        io.to(`user_${session.partner1Id}`).emit("achievementUnlocked", {
+          slug,
+          emoji: def.emoji,
+          title: def.title,
+        });
+        io.to(`user_${session.partner2Id}`).emit("achievementUnlocked", {
+          slug,
+          emoji: def.emoji,
+          title: def.title,
+        });
+      });
+
       // persist result
       await prisma.gameSession.update({
         where: { id: sessionId },
@@ -112,6 +139,7 @@ export function initSockets(io: Server<ClientToServerEvents, ServerToClientEvent
             partner1Id: session.partner1Id,
             partner2Id: session.partner2Id,
             partner2Accepted: true,
+            partnershipId: session.partnershipId!,
           },
         });
         io.to(room).emit("restart", { sessionId: newSession.id });
