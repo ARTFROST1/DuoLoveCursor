@@ -129,8 +129,13 @@ export default function PartnerProfile() {
               }}
             >
               <span>{new Date(h.playedAt).toLocaleDateString()}</span>
-              <span>{h.gameSession.game.title}</span>
-              <span>{h.resultShort ?? "-"}</span>
+              <span>{h.gameTitle}</span>
+              <span>{
+                    h.resultShort === "Ты выиграл"
+                      ? "🏆 " + h.resultShort
+                      : h.resultShort === "Ты проиграл"
+                      ? "❌ " + h.resultShort
+                      : h.resultShort ?? "-"}</span>
             </div>
           ))}
           {history.length === 0 && <p>История пока пуста</p>}

@@ -15,6 +15,8 @@ interface ServerToClientEvents {
   exit: () => void;
   // Misc events
   partnerDisconnected: () => void;
+  // History events
+  historyAdded: () => void;
 }
 
 interface ClientToServerEvents {
@@ -106,10 +108,38 @@ export function initSockets(io: Server<ClientToServerEvents, ServerToClientEvent
       });
 
       // persist result
-      await prisma.gameSession.update({
+      // Persist result and create history entries for both players
+      const finishedSession = await prisma.gameSession.update({
         where: { id: sessionId },
         data: { winnerId: userId, endedAt: new Date() },
       });
+
+      const isDraw = finishedSession.winnerId == null;
+
+      const getResultText = (targetId: number): string => {
+        if (isDraw) return "Ничья";
+        return finishedSession.winnerId === targetId ? "Ты выиграл" : "Ты проиграл";
+      };
+
+      // Create user-specific history records (skip if already exists)
+      await prisma.history.createMany({
+        data: [
+          {
+            userId: finishedSession.partner1Id,
+            gameSessionId: finishedSession.id,
+            resultShort: getResultText(finishedSession.partner1Id),
+          },
+          {
+            userId: finishedSession.partner2Id,
+            gameSessionId: finishedSession.id,
+            resultShort: getResultText(finishedSession.partner2Id),
+          },
+        ],
+      });
+
+      // Notify clients to refresh history
+      io.to(`user_${finishedSession.partner1Id}`).emit("historyAdded");
+      io.to(`user_${finishedSession.partner2Id}`).emit("historyAdded");
     });
 
     socket.on("choice", async ({ action }) => {

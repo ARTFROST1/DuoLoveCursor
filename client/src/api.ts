@@ -148,6 +148,18 @@ export async function getSession(sessionId: number) {
 }
 
 // ---------------- Profile ----------------
+export interface HistoryItem {
+  id: number;
+  playedAt: string; // ISO
+  gameTitle: string;
+  gameSlug: string;
+  initiator: string;
+  resultShort: string;
+  durationSec: number | null;
+  canRepeat: boolean;
+  gameSessionId: number;
+}
+
 export interface ProfileData {
   user: { id: number; name?: string; avatarId?: number; avatarEmoji?: string };
   partner?: { id: number; name?: string; avatarId?: number; avatarEmoji?: string };
@@ -165,16 +177,9 @@ export interface ProfileData {
       goal: number;
     };
   }>;
-  history: Array<{
-    id: number;
-    playedAt: string;
-    resultShort?: string;
-    gameSession: {
-      id: number;
-      game: Game;
-    };
-  }>;
+  history: HistoryItem[];
 }
+
 
 // ---------------- Settings ----------------
 export interface UserSettings {

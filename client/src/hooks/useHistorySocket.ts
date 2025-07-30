@@ -2,14 +2,7 @@ import { useEffect, useRef } from "react";
 import io from "socket.io-client";
 
 
-
-export interface AchievementUnlockedPayload { 
-  slug: string; 
-  emoji: string; 
-  title: string; 
-}
-
-export function useAchievementSocket(userId: number, onUnlock: (p: AchievementUnlockedPayload) => void, enabled: boolean = true) {
+export function useHistorySocket(userId: number, onAdded: () => void, enabled: boolean = true) {
   const socketRef = useRef<any>();
 
   useEffect(() => {
@@ -21,12 +14,12 @@ export function useAchievementSocket(userId: number, onUnlock: (p: AchievementUn
     });
     socketRef.current = socket;
 
-    socket.on("achievementUnlocked", (payload: AchievementUnlockedPayload) => {
-      onUnlock(payload);
+    socket.on("historyAdded", () => {
+      onAdded();
     });
 
     return () => {
       socket.disconnect();
     };
-  }, [userId, enabled, onUnlock]);
+  }, [userId, enabled, onAdded]);
 }

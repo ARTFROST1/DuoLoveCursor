@@ -2,8 +2,9 @@ import { useAppStore } from "../store";
 import { useNavigate } from "react-router-dom";
 import { useEffect, useState } from "react";
 import AchievementBadge from "../components/AchievementBadge";
-import { getAchievements, type AchievementItem } from "../api";
+import { getAchievements, type AchievementItem, startGame, type HistoryItem } from "../api";
 import { useAchievementSocket } from "../hooks/useAchievementSocket";
+import { useHistorySocket } from "../hooks/useHistorySocket";
 import { useQuery } from "@tanstack/react-query";
 import { getProfile, type ProfileData, getStats, type StatsResponse } from "../api";
 import Avatar from "../components/Avatar";
@@ -21,7 +22,12 @@ export default function Profile() {
     }
   }, [partnerConnected, navigate]);
 
-  const { data, isLoading, error } = useQuery<ProfileData>({
+  const {
+    data,
+    isLoading,
+    error,
+    refetch: refetchProfile,
+  } = useQuery<ProfileData>({
     queryKey: ["profile", userId],
     queryFn: () => getProfile(userId),
     enabled: !!userId && partnerConnected,
@@ -64,6 +70,15 @@ export default function Profile() {
       refetchAchievements();
     },
     true,
+  );
+
+  // socket listener for new history entries
+  useHistorySocket(
+    userId ?? 0,
+    () => {
+      refetchProfile();
+    },
+    !!userId && partnerConnected,
   );
 
   if (isLoading) return <div style={{ padding: 16 }}>Загрузка…</div>;
@@ -271,7 +286,7 @@ export default function Profile() {
 
       {tab === "history" && (
         <div style={{ marginTop: 16, display: "flex", flexDirection: "column", gap: 8 }}>
-          {history.map((h) => (
+          {history.map((h: HistoryItem) => (
             <div
               key={h.id}
               style={{
@@ -279,12 +294,40 @@ export default function Profile() {
                 border: "1px solid #ddd",
                 borderRadius: 8,
                 display: "flex",
-                justifyContent: "space-between",
+                flexDirection: "column",
+                gap: 4,
               }}
             >
-              <span>{new Date(h.playedAt).toLocaleDateString()}</span>
-              <span>{h.gameSession.game.title}</span>
-              <span>{h.resultShort ?? "-"}</span>
+              <div style={{ display: "flex", justifyContent: "space-between", fontWeight: 500 }}>
+                <span>🎮 {h.gameTitle}</span>
+                {h.canRepeat && (
+                  <button
+                    onClick={async () => {
+                      if (!userId) return;
+                      try {
+                        const sessionId = await startGame(userId, h.gameSlug);
+                        navigate(`/game/${h.gameSlug}?session=${sessionId}`);
+                      } catch (err) {
+                        alert("Не удалось запустить игру");
+                      }
+                    }}
+                    style={{ background: "none", border: "none", color: "#6da9ff", cursor: "pointer" }}
+                  >
+                    🔁 Сыграть снова
+                  </button>
+                )}
+              </div>
+              <div style={{ display: "flex", flexWrap: "wrap", gap: 8, fontSize: 14, color: "#555" }}>
+                <span>📅 {new Date(h.playedAt).toLocaleDateString(undefined, { day: "numeric", month: "long" })}</span>
+                <span>🤝 Пригласил: {h.initiator}</span>
+                <span>{
+                  h.resultShort === "Ты выиграл"
+                    ? "🏆"
+                    : h.resultShort === "Ты проиграл"
+                    ? "❌"
+                    : "➗"}{" "}{h.resultShort}</span>
+                {h.durationSec != null && <span>⏱ {Math.round(h.durationSec / 60)} мин</span>}
+              </div>
             </div>
           ))}
           {history.length === 0 && <p>История пока пуста</p>}

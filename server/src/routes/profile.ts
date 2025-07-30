@@ -34,7 +34,8 @@ router.get("/:userId", async (req, res) => {
       },
     });
 
-    let partner: { id: number; name?: string; avatarId?: number } | undefined;
+    type PartnerInfo = { id: number; name?: string; avatarId?: number; avatarEmoji?: string };
+    let partner: PartnerInfo | undefined;
     if (partnership) {
       const partnerUser = partnership.user1Id === userId ? partnership.user2 : partnership.user1;
       partner = {
@@ -62,7 +63,7 @@ router.get("/:userId", async (req, res) => {
     });
 
     // --- History (last 20 games) ---
-    const history = await prisma.history.findMany({
+    const rawHistory = await prisma.history.findMany({
       where: { userId },
       include: {
         gameSession: {
@@ -71,6 +72,27 @@ router.get("/:userId", async (req, res) => {
       },
       orderBy: { playedAt: "desc" },
       take: 20,
+    });
+
+    // Enrich with UI-friendly fields
+    const history = rawHistory.map((h) => {
+      const gs = h.gameSession;
+      const initiatorIsUser = gs.partner1Id === userId;
+      const initiator = initiatorIsUser ? "Ты" : gs.partner1.displayName ?? "Партнёр";
+      const winnerId = gs.winnerId;
+      const resultText = winnerId == null ? "Ничья" : winnerId === userId ? "Ты выиграл" : "Ты проиграл";
+      const durationSec = gs.endedAt ? Math.round((new Date(gs.endedAt).getTime() - new Date(gs.startedAt).getTime()) / 1000) : null;
+      return {
+        id: h.id,
+        playedAt: h.playedAt,
+        gameTitle: gs.game.title,
+        gameSlug: gs.game.slug,
+        initiator,
+        resultShort: resultText,
+        durationSec,
+        canRepeat: gs.game.isActive,
+        gameSessionId: gs.id,
+      };
     });
 
     res.json({
