@@ -1,0 +1,23 @@
+-- CreateTable
+CREATE TABLE "GameRound" (
+    "id" INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
+    "sessionId" INTEGER NOT NULL,
+    "roundIndex" INTEGER NOT NULL,
+    "startedAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "endedAt" DATETIME,
+    "winnerId" INTEGER,
+    CONSTRAINT "GameRound_sessionId_fkey" FOREIGN KEY ("sessionId") REFERENCES "GameSession" ("id") ON DELETE RESTRICT ON UPDATE CASCADE,
+    CONSTRAINT "GameRound_winnerId_fkey" FOREIGN KEY ("winnerId") REFERENCES "User" ("id") ON DELETE SET NULL ON UPDATE CASCADE
+);
+
+-- CreateTable
+CREATE TABLE "GameAction" (
+    "id" INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
+    "roundId" INTEGER NOT NULL,
+    "userId" INTEGER NOT NULL,
+    "action" TEXT NOT NULL,
+    "payload" JSONB,
+    "createdAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT "GameAction_roundId_fkey" FOREIGN KEY ("roundId") REFERENCES "GameRound" ("id") ON DELETE RESTRICT ON UPDATE CASCADE,
+    CONSTRAINT "GameAction_userId_fkey" FOREIGN KEY ("userId") REFERENCES "User" ("id") ON DELETE RESTRICT ON UPDATE CASCADE
+);

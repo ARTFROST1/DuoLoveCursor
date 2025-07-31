@@ -1,7 +1,7 @@
 import { Server } from "socket.io";
 import prisma from "./prisma";
-import { processGameSessionResult } from "./services/achievementService";
-import { ACHIEVEMENTS } from "./achievements";
+import { getController } from "./games/registry";
+import { GameController, EventCtx } from "./games/interfaces";
 
 interface ServerToClientEvents {
   // Achievement events
@@ -25,10 +25,8 @@ interface ClientToServerEvents {
 }
 
 export function initSockets(io: Server<ClientToServerEvents, ServerToClientEvents>) {
-  // room => firstReactor userId
-  const roomWinner: Map<string, number> = new Map();
-  // room => { [userId]: "exit" | "again" }
-  const roomChoices: Map<string, Record<number, "exit" | "again">> = new Map();
+  // sessionId => GameController
+  const activeControllers: Map<number, GameController> = new Map();
 
   io.on("connection", async (socket) => {
     const userId = Number(socket.handshake.query.userId);
@@ -47,8 +45,11 @@ export function initSockets(io: Server<ClientToServerEvents, ServerToClientEvent
       return;
     }
 
-    // Validate session
-    const session = await prisma.gameSession.findUnique({ where: { id: sessionId } });
+    // Validate session and get game info
+    const session = await prisma.gameSession.findUnique({ 
+      where: { id: sessionId },
+      include: { game: true }
+    });
     if (!session) {
       socket.emit("error", { message: "Session not found" });
       socket.disconnect();
@@ -70,118 +71,50 @@ export function initSockets(io: Server<ClientToServerEvents, ServerToClientEvent
     const room = `session_${sessionId}`;
     socket.join(room);
 
-    // If both partners connected and partner2Accepted, emit start
-    const numClients = io.sockets.adapter.rooms.get(room)?.size || 0;
-    if (numClients === 2 && session.partner2Accepted) {
-      setTimeout(() => {
-        roomWinner.delete(room);
-        io.to(room).emit("start", { countdownMs: 3000 });
-      }, 500);
+    // Get or create game controller
+    let controller = activeControllers.get(sessionId);
+    if (!controller) {
+      const controllerFactory = getController(session.game.slug);
+      if (!controllerFactory) {
+        socket.emit("error", { message: `Game ${session.game.slug} not supported` });
+        socket.disconnect();
+        return;
+      }
+      controller = controllerFactory(io, room, sessionId, session);
+      activeControllers.set(sessionId, controller);
     }
 
-    socket.on("reaction", async () => {
-      if (roomWinner.has(room)) return; // already have winner
-      roomWinner.set(room, userId);
-      io.to(room).emit("result", { winnerId: userId });
+    // If both partners connected and partner2Accepted, start the game
+    const numClients = io.sockets.adapter.rooms.get(room)?.size || 0;
+    if (numClients === 2 && session.partner2Accepted) {
+      controller.start();
+    }
 
-      // Process achievements related to game session finish
-      const unlocked = await processGameSessionResult({
-        partnershipId: session.partnershipId!,
-        partner1Id: session.partner1Id,
-        partner2Id: session.partner2Id,
-        winnerId: userId,
-      });
-      // Notify both partners if unlocked
-      unlocked.forEach((slug: string) => {
-        const def = ACHIEVEMENTS.find((a) => a.slug === slug);
-        if (!def) return;
-        io.to(`user_${session.partner1Id}`).emit("achievementUnlocked", {
-          slug,
-          emoji: def.emoji,
-          title: def.title,
-        });
-        io.to(`user_${session.partner2Id}`).emit("achievementUnlocked", {
-          slug,
-          emoji: def.emoji,
-          title: def.title,
-        });
-      });
-
-      // persist result
-      // Persist result and create history entries for both players
-      const finishedSession = await prisma.gameSession.update({
-        where: { id: sessionId },
-        data: { winnerId: userId, endedAt: new Date() },
-      });
-
-      const isDraw = finishedSession.winnerId == null;
-
-      const getResultText = (targetId: number): string => {
-        if (isDraw) return "Ничья";
-        return finishedSession.winnerId === targetId ? "Ты выиграл" : "Ты проиграл";
+    // Delegate all game events to the controller
+    socket.onAny(async (event: string, ...args: any[]) => {
+      // Skip non-game events
+      if (event === 'disconnect') return;
+      
+      const ctx: EventCtx = {
+        room,
+        sessionId,
+        userId
       };
-
-      // Create user-specific history records (skip if already exists)
-      await prisma.history.createMany({
-        data: [
-          {
-            userId: finishedSession.partner1Id,
-            gameSessionId: finishedSession.id,
-            resultShort: getResultText(finishedSession.partner1Id),
-          },
-          {
-            userId: finishedSession.partner2Id,
-            gameSessionId: finishedSession.id,
-            resultShort: getResultText(finishedSession.partner2Id),
-          },
-        ],
-      });
-
-      // Notify clients to refresh history
-      io.to(`user_${finishedSession.partner1Id}`).emit("historyAdded");
-      io.to(`user_${finishedSession.partner2Id}`).emit("historyAdded");
-    });
-
-    socket.on("choice", async ({ action }) => {
-      let choices = roomChoices.get(room);
-      if (!choices) {
-        choices = {};
-        roomChoices.set(room, choices);
-      }
-      choices[userId] = action;
-
-      const values = Object.values(choices);
-      const exitCount = values.filter((c) => c === "exit").length;
-      const againCount = values.filter((c) => c === "again").length;
-
-      // Notify progress to clients
-      io.to(room).emit("choiceProgress", { exitCount, againCount });
-
-      if (values.length < 2) return; // wait for second player
-
-      roomChoices.delete(room);
-
-      if (againCount === 2) {
-        // create new session immediately using same game
-        const newSession = await prisma.gameSession.create({
-          data: {
-            gameId: session.gameId,
-            partner1Id: session.partner1Id,
-            partner2Id: session.partner2Id,
-            partner2Accepted: true,
-            partnershipId: session.partnershipId!,
-          },
-        });
-        io.to(room).emit("restart", { sessionId: newSession.id });
-      } else {
-        // any other combination results in exit to main
-        io.to(room).emit("exit");
-      }
+      
+      const payload = args[0]; // most events have single payload
+      await controller!.onClientEvent(event, payload, ctx);
     });
 
     socket.on("disconnect", () => {
-      roomChoices.delete(room);
-      // Nothing to do for now
+      // Check if room is empty, if so dispose controller
+      const remainingClients = io.sockets.adapter.rooms.get(room)?.size || 0;
+      if (remainingClients === 0) {
+        const controller = activeControllers.get(sessionId);
+        if (controller) {
+          controller.dispose();
+          activeControllers.delete(sessionId);
+        }
+      }
     });
   });
 }

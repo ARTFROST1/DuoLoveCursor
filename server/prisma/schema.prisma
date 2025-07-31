@@ -22,6 +22,8 @@ model User {
   gameSessions1    GameSession[]     @relation("Partner1")
   gameSessions2    GameSession[]     @relation("Partner2")
   gamesWon         GameSession[]     @relation("WinnerSessions")
+  roundsWon        GameRound[]       @relation("RoundWinner")
+  gameActions      GameAction[]
   invitesCreated   Invite[]          @relation("InvitesCreated")
   invitesUsed      Invite[]          @relation("InvitesUsed")
   userAchievements UserAchievement[]
@@ -69,9 +71,35 @@ model GameSession {
   winner           User?     @relation("WinnerSessions", fields: [winnerId], references: [id])
   winnerId         Int?
 
+  rounds           GameRound[]
+
   histories     History[]
   Partnership   Partnership? @relation(fields: [partnershipId], references: [id])
   partnershipId Int?
+}
+
+model GameRound {
+  id          Int         @id @default(autoincrement())
+  session     GameSession @relation(fields: [sessionId], references: [id])
+  sessionId   Int
+  roundIndex  Int
+  startedAt   DateTime    @default(now())
+  endedAt     DateTime?
+  winner      User?       @relation("RoundWinner", fields: [winnerId], references: [id])
+  winnerId    Int?
+
+  actions     GameAction[]
+}
+
+model GameAction {
+  id        Int        @id @default(autoincrement())
+  round     GameRound  @relation(fields: [roundId], references: [id])
+  roundId   Int
+  user      User       @relation(fields: [userId], references: [id])
+  userId    Int
+  action    String
+  payload   Json?
+  createdAt DateTime   @default(now())
 }
 
 enum AchievementScope {
