@@ -1,13 +1,12 @@
 import { Link } from "react-router-dom";
 
 interface Props {
-  id: number;
   slug: string;
   title: string;
   description: string;
 }
 
-export default function GameCard({ id, slug, title, description }: Props) {
+export default function GameCard({ slug, title, description }: Props) {
   return (
     <Link
       to={`/game/${slug}`}

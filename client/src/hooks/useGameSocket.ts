@@ -1,41 +1,28 @@
 import { useEffect, useRef, useState } from "react";
-import { io } from "socket.io-client";
-import type { Socket as IOSocket } from "socket.io-client";
+import io from "socket.io-client";
 
-interface ServerToClientEvents {
-  start: { countdownMs: number };
-  result: { winnerId: number };
-  error: { message: string };
-  choiceProgress: { exitCount: number; againCount: number };
-  restart: { sessionId: number };
-  exit: void;
-}
 
-interface ClientToServerEvents {
-  reaction: () => void;
-  choice: (payload: { action: "exit" | "again" }) => void;
-}
 
 
 
 export interface GameSocketState {
-  phase: "waiting" | "countdown" | "playing" | "finished" | "error";
-  countdownSec?: number;
+    phase: "waiting" | "countdown" | "playing" | "finished" | "error";
+    countdownSec?: number;
   winnerId?: number;
   error?: string;
   exitCount?: number;
-  againCount?: number;
+    againCount?: number;
 }
 
 export function useGameSocket(sessionId: number, userId: number, enabled: boolean = true) {
-  const [state, setState] = useState<GameSocketState>({ phase: "waiting" });
-  const socketRef = useRef<IOSocket<ServerToClientEvents, ClientToServerEvents>>();
+    const [state, setState] = useState<GameSocketState>({ phase: "waiting" });
+    const socketRef = useRef<any>(null);
 
   useEffect(() => {
     if (!enabled) return;
     if (!sessionId || !userId) return;
 
-    const socket: IOSocket<ServerToClientEvents, ClientToServerEvents> = io("/", {
+    const socket: any = io("/", {
       path: "/socket.io",
       query: { sessionId: String(sessionId), userId: String(userId) },
     });

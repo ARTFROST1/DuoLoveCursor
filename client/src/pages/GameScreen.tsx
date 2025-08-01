@@ -1,4 +1,5 @@
 import { useParams, useNavigate, useSearchParams } from "react-router-dom";
+import QuizGame from "./QuizGame";
 import { useQuery } from "@tanstack/react-query";
 import { startGame, getSession, cancelSession } from "../api";
 import { useAppStore } from "../store";
@@ -7,6 +8,9 @@ import { useGameSocket } from "../hooks/useGameSocket";
 
 export default function GameScreen() {
   const { slug } = useParams<{ slug: string }>();
+  if (slug === "quiz_love") {
+    return <QuizGame />;
+  }
   const [search] = useSearchParams();
   const sessionId = Number(search.get("session"));
   const userId = useAppStore((s) => s.userId);

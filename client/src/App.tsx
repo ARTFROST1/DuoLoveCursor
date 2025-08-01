@@ -5,7 +5,7 @@ import Profile from "./pages/Profile";
 import InviteAccept from "./pages/InviteAccept";
 import GameScreen from "./pages/GameScreen";
 import { useEffect, useRef } from "react";
-import { io as socketIO } from "socket.io-client";
+import socketIO from "socket.io-client";
 import tg from "@twa-dev/sdk";
 import { useNavigate } from "react-router-dom";
 import { auth, getPartnershipStatus, getProfile, type ProfileData } from "./api";
